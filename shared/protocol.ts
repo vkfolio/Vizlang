@@ -58,6 +58,16 @@ export interface CheckpointInfo {
   parentId?: string;
 }
 
+// --- Attachment Types ---
+
+export interface Attachment {
+  type: 'image' | 'file' | 'audio';
+  name: string;
+  mimeType: string;
+  /** Base64-encoded data or file URI */
+  data: string;
+}
+
 // --- Trace Types ---
 
 export interface TraceSpan {
@@ -128,7 +138,7 @@ export type WebviewMessage =
   // HITL
   | { type: 'RESOLVE_INTERRUPT'; response: unknown }
   // Chat
-  | { type: 'SEND_MESSAGE'; threadId: string; content: string }
+  | { type: 'SEND_MESSAGE'; threadId: string; content: string; attachments?: Attachment[] }
   // Threads
   | { type: 'CREATE_THREAD' }
   | { type: 'SWITCH_THREAD'; threadId: string }
