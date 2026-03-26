@@ -1,5 +1,6 @@
 import React from 'react';
 import { useThreadStore } from '@/stores/threadStore';
+import { useChatStore } from '@/stores/chatStore';
 import { sendMessage } from '@/bridge/MessageBus';
 import { cn } from '@/lib/utils';
 
@@ -12,12 +13,28 @@ export function ThreadsPanel() {
   };
 
   const handleSwitch = (threadId: string) => {
+    if (threadId === activeThreadId) return;
+    // Save current chat messages and restore target thread's messages
+    useChatStore.getState().switchThread(activeThreadId, threadId);
     useThreadStore.getState().setActiveThread(threadId);
     sendMessage({ type: 'SWITCH_THREAD', threadId });
   };
 
   const handleDelete = (threadId: string) => {
     sendMessage({ type: 'DELETE_THREAD', threadId });
+    useThreadStore.getState().removeThread(threadId);
+    useChatStore.getState().clearThread(threadId);
+    // If we deleted the active thread, switch to default
+    if (activeThreadId === threadId) {
+      useChatStore.getState().switchThread(threadId, 'default');
+      useThreadStore.getState().setActiveThread('default');
+      sendMessage({ type: 'SWITCH_THREAD', threadId: 'default' });
+    }
+  };
+
+  const handleClearDefault = () => {
+    useChatStore.getState().clear();
+    useChatStore.getState().clearThread('default');
   };
 
   return (
@@ -43,6 +60,7 @@ export function ThreadsPanel() {
           threadId="default"
           isActive={activeThreadId === 'default'}
           onClick={() => handleSwitch('default')}
+          onClear={handleClearDefault}
         />
 
         {threads.map((t) => (
@@ -72,12 +90,14 @@ function ThreadItem({
   isActive,
   onClick,
   onDelete,
+  onClear,
 }: {
   threadId: string;
   status?: string;
   isActive: boolean;
   onClick: () => void;
   onDelete?: () => void;
+  onClear?: () => void;
 }) {
   return (
     <button
@@ -96,10 +116,22 @@ function ThreadItem({
       <span className="text-[12px] font-mono text-foreground/80 truncate flex-1">
         {threadId === 'default' ? 'default' : threadId.slice(0, 8) + '...'}
       </span>
+      {onClear && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onClear(); }}
+          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-all"
+          title="Clear messages"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M2 3h8M4 3V2h4v1M3 3v7h6V3" />
+          </svg>
+        </button>
+      )}
       {onDelete && (
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-node-error transition-all"
+          title="Delete thread"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M3 3l6 6M9 3l-6 6" />

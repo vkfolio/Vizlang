@@ -175,6 +175,18 @@ export class GraphEditorProvider {
         await this.handleSwitchThread(msg.threadId);
         break;
 
+      case 'DELETE_THREAD':
+        try {
+          await this.bridge.request('delete_thread', {
+            thread_id: msg.threadId,
+          });
+          // Refresh threads list after deletion
+          await this.refreshThreads();
+        } catch (err: any) {
+          vscode.window.showErrorMessage(`VizLang: Failed to delete thread — ${err.message}`);
+        }
+        break;
+
       case 'GET_STATE':
         await this.handleGetState(msg.threadId);
         break;

@@ -15,12 +15,18 @@ export interface ChatMessage {
 interface ChatState {
   messages: ChatMessage[];
   isStreaming: boolean;
+  /** Per-thread message cache so switching threads preserves history */
+  threadMessages: Record<string, ChatMessage[]>;
 
   addMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
   appendToLastMessage: (content: string) => void;
   setMessages: (msgs: ChatMessage[]) => void;
   setStreaming: (streaming: boolean) => void;
   clear: () => void;
+  /** Save current messages under the given threadId, then load (or clear) the target thread */
+  switchThread: (fromThreadId: string, toThreadId: string) => void;
+  /** Clear cached messages for a specific thread */
+  clearThread: (threadId: string) => void;
 }
 
 let msgCounter = 0;
@@ -28,6 +34,7 @@ let msgCounter = 0;
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   isStreaming: false,
+  threadMessages: {},
 
   addMessage: (msg) => {
     const message: ChatMessage = {
@@ -63,4 +70,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   clear: () => set({ messages: [], isStreaming: false }),
+
+  switchThread: (fromThreadId, toThreadId) => {
+    const state = get();
+    // Save current messages for the thread we're leaving
+    const updated: Record<string, ChatMessage[]> = {
+      ...state.threadMessages,
+      [fromThreadId]: state.messages,
+    };
+    // Restore cached messages for the target thread, or start fresh
+    const restored = updated[toThreadId] || [];
+    set({
+      threadMessages: updated,
+      messages: restored,
+      isStreaming: false,
+    });
+  },
+
+  clearThread: (threadId) => {
+    set((s) => {
+      const copy = { ...s.threadMessages };
+      delete copy[threadId];
+      return { threadMessages: copy };
+    });
+  },
 }));
