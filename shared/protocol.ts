@@ -98,6 +98,8 @@ export type HostMessage =
   | { type: 'STREAM_EVENT'; mode: StreamMode; data: unknown; nodeId?: string }
   | { type: 'RUN_COMPLETE'; finalState: unknown }
   | { type: 'RUN_ERROR'; error: string; traceback?: string; nodeId?: string }
+  // Step mode
+  | { type: 'STEP_PAUSED'; nodeId: string; nextNodes: string[] }
   // HITL
   | { type: 'INTERRUPT_RECEIVED'; interrupt: InterruptData; nodeId: string }
   | { type: 'INTERRUPT_RESUMED' }
@@ -133,7 +135,7 @@ export type WebviewMessage =
       input: unknown;
       stepMode: boolean;
     }
-  | { type: 'RESUME_RUN'; threadId: string }
+  | { type: 'RESUME_RUN'; threadId: string; stepMode?: boolean }
   | { type: 'CANCEL_RUN' }
   // HITL
   | { type: 'RESOLVE_INTERRUPT'; response: unknown }

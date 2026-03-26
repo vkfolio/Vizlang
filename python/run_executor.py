@@ -18,14 +18,111 @@ class RunExecutor:
         graph: CompiledStateGraph,
         send_stream: Callable,
         send_interrupt: Callable,
+        send_step_pause: Callable,
         send_done: Callable,
     ):
         self.graph = graph
         self.send_stream = send_stream
         self.send_interrupt = send_interrupt
+        self.send_step_pause = send_step_pause
         self.send_done = send_done
         self._cancelled = threading.Event()
         self._current_thread_id: str | None = None
+
+    def _get_all_node_names(self) -> list[str]:
+        """Get all node names from the graph for step mode."""
+        try:
+            drawable = self.graph.get_graph()
+            return [
+                n for n in drawable.nodes
+                if n not in ("__start__", "__end__")
+            ]
+        except Exception:
+            return []
+
+    def _run_stream(
+        self,
+        req_id: str,
+        input_data: Any,
+        config: dict,
+        stream_modes: list[str],
+        step_mode: bool = False,
+    ) -> None:
+        """Common streaming logic for execute and resume."""
+        try:
+            # Build stream kwargs
+            stream_kwargs: dict[str, Any] = {
+                "stream_mode": stream_modes if len(stream_modes) > 1 else stream_modes[0],
+            }
+
+            # interrupt_after is a stream() kwarg, NOT a config key
+            if step_mode:
+                node_names = self._get_all_node_names()
+                if node_names:
+                    stream_kwargs["interrupt_after"] = node_names
+
+            stream = self.graph.stream(
+                input_data,
+                config,
+                **stream_kwargs,
+            )
+
+            for event in stream:
+                if self._cancelled.is_set():
+                    break
+
+                # Handle multi-mode streaming (returns tuples)
+                if len(stream_modes) > 1 and isinstance(event, tuple):
+                    mode, data = event
+                else:
+                    mode = stream_modes[0] if len(stream_modes) == 1 else "updates"
+                    data = event
+
+                serialized = serialize_value(data)
+                self.send_stream(req_id, mode, serialized)
+
+            # Check if interrupted (state has pending tasks)
+            self._check_for_interrupts(req_id, config)
+
+        except Exception as e:
+            import traceback
+            self.send_stream(req_id, "error", {
+                "message": str(e),
+                "traceback": traceback.format_exc(),
+            })
+            self.send_done(req_id)
+
+    def _check_for_interrupts(self, req_id: str, config: dict) -> None:
+        """Check if graph is paused and send appropriate events."""
+        state = self.graph.get_state(config)
+        if state.next:
+            tasks = getattr(state, "tasks", [])
+
+            # Check for explicit HITL interrupts
+            has_interrupts = False
+            for task in tasks:
+                interrupts = getattr(task, "interrupts", [])
+                for interrupt in interrupts:
+                    has_interrupts = True
+                    self.send_interrupt(req_id, {
+                        "value": serialize_value(getattr(interrupt, "value", None)),
+                        "node_id": task.name if hasattr(task, "name") else str(state.next[0]),
+                        "resumable": getattr(interrupt, "resumable", True),
+                        "when": getattr(interrupt, "when", "during"),
+                    })
+
+            if not has_interrupts:
+                # Step mode pause — graph stopped between nodes
+                next_nodes = list(state.next)
+                # Get current state values for inspection
+                state_values = serialize_value(state.values) if state.values else {}
+                self.send_step_pause(req_id, {
+                    "completed_node": next_nodes[0] if next_nodes else "",
+                    "next_nodes": next_nodes,
+                    "state": state_values,
+                })
+        else:
+            self.send_done(req_id)
 
     def execute(
         self,
@@ -40,72 +137,7 @@ class RunExecutor:
         self._current_thread_id = thread_id
 
         config = {"configurable": {"thread_id": thread_id}}
-
-        # Step mode: interrupt after every node
-        if step_mode:
-            config["interrupt_after"] = "*"
-
-        try:
-            stream = self.graph.stream(
-                input_data,
-                config,
-                stream_mode=stream_modes if len(stream_modes) > 1 else stream_modes[0],
-            )
-
-            for event in stream:
-                if self._cancelled.is_set():
-                    break
-
-                # Handle multi-mode streaming (returns tuples)
-                if len(stream_modes) > 1 and isinstance(event, tuple):
-                    mode, data = event
-                else:
-                    mode = stream_modes[0] if len(stream_modes) == 1 else "updates"
-                    data = event
-
-                # Detect node name from updates mode
-                node_id = None
-                if mode == "updates" and isinstance(data, dict):
-                    keys = list(data.keys())
-                    if keys:
-                        node_id = keys[0]
-
-                serialized = serialize_value(data)
-                self.send_stream(req_id, mode, serialized)
-
-            # Check if interrupted (state has pending tasks)
-            state = self.graph.get_state(config)
-            if state.next:
-                # Graph is paused (step mode or interrupt)
-                tasks = getattr(state, "tasks", [])
-                for task in tasks:
-                    interrupts = getattr(task, "interrupts", [])
-                    for interrupt in interrupts:
-                        self.send_interrupt(req_id, {
-                            "value": serialize_value(getattr(interrupt, "value", None)),
-                            "node_id": task.name if hasattr(task, "name") else str(state.next[0]),
-                            "resumable": getattr(interrupt, "resumable", True),
-                            "when": getattr(interrupt, "when", "during"),
-                        })
-
-                if not any(getattr(t, "interrupts", []) for t in tasks):
-                    # Step mode pause (no explicit interrupt, just paused between nodes)
-                    self.send_interrupt(req_id, {
-                        "value": f"Paused before: {', '.join(state.next)}",
-                        "node_id": state.next[0] if state.next else "",
-                        "resumable": True,
-                        "when": "after",
-                    })
-            else:
-                self.send_done(req_id)
-
-        except Exception as e:
-            import traceback
-            self.send_stream(req_id, "error", {
-                "message": str(e),
-                "traceback": traceback.format_exc(),
-            })
-            self.send_done(req_id)
+        self._run_stream(req_id, input_data, config, stream_modes, step_mode)
 
     def resume(
         self,
@@ -113,68 +145,20 @@ class RunExecutor:
         thread_id: str,
         resume_value: Any,
         stream_modes: list[str],
+        step_mode: bool = False,
     ) -> None:
-        """Resume from a HITL interrupt."""
+        """Resume from a HITL interrupt or step pause."""
         self._cancelled.clear()
         self._current_thread_id = thread_id
 
         config = {"configurable": {"thread_id": thread_id}}
 
-        try:
-            if resume_value is not None:
-                input_data = Command(resume=resume_value)
-            else:
-                input_data = None
+        if resume_value is not None:
+            input_data = Command(resume=resume_value)
+        else:
+            input_data = None
 
-            stream = self.graph.stream(
-                input_data,
-                config,
-                stream_mode=stream_modes if len(stream_modes) > 1 else stream_modes[0],
-            )
-
-            for event in stream:
-                if self._cancelled.is_set():
-                    break
-
-                if len(stream_modes) > 1 and isinstance(event, tuple):
-                    mode, data = event
-                else:
-                    mode = stream_modes[0] if len(stream_modes) == 1 else "updates"
-                    data = event
-
-                serialized = serialize_value(data)
-                self.send_stream(req_id, mode, serialized)
-
-            # Check for further interrupts
-            state = self.graph.get_state(config)
-            if state.next:
-                tasks = getattr(state, "tasks", [])
-                for task in tasks:
-                    interrupts = getattr(task, "interrupts", [])
-                    for interrupt in interrupts:
-                        self.send_interrupt(req_id, {
-                            "value": serialize_value(getattr(interrupt, "value", None)),
-                            "node_id": task.name if hasattr(task, "name") else str(state.next[0]),
-                            "resumable": getattr(interrupt, "resumable", True),
-                            "when": getattr(interrupt, "when", "during"),
-                        })
-                if not any(getattr(t, "interrupts", []) for t in tasks):
-                    self.send_interrupt(req_id, {
-                        "value": f"Paused before: {', '.join(state.next)}",
-                        "node_id": state.next[0] if state.next else "",
-                        "resumable": True,
-                        "when": "after",
-                    })
-            else:
-                self.send_done(req_id)
-
-        except Exception as e:
-            import traceback
-            self.send_stream(req_id, "error", {
-                "message": str(e),
-                "traceback": traceback.format_exc(),
-            })
-            self.send_done(req_id)
+        self._run_stream(req_id, input_data, config, stream_modes, step_mode)
 
     def cancel(self) -> None:
         """Cancel the current execution."""

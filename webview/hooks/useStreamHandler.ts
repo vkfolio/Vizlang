@@ -172,6 +172,15 @@ export function useStreamHandler() {
           });
           break;
 
+        case 'STEP_PAUSED':
+          // Step-mode pause: highlight the next node, don't show HITL overlay
+          setRunStatus('interrupted');
+          if (msg.nextNodes?.[0]) {
+            setNodeStatus(msg.nextNodes[0], 'running');
+            setActiveNode(msg.nextNodes[0]);
+          }
+          break;
+
         case 'INTERRUPT_RECEIVED':
           setRunStatus('interrupted');
           setNodeStatus(msg.nodeId, 'interrupted');
@@ -188,9 +197,18 @@ export function useStreamHandler() {
           setInterrupt(null);
           break;
 
-        case 'THREADS_LIST':
-          setThreads(msg.threads);
+        case 'THREADS_LIST': {
+          // Merge new threads into existing list (avoid duplicates)
+          const existing = useThreadStore.getState().threads;
+          const existingIds = new Set(existing.map((t) => t.threadId));
+          const newThreads = msg.threads.filter((t) => !existingIds.has(t.threadId));
+          if (newThreads.length > 0) {
+            setThreads([...existing, ...newThreads]);
+          } else if (existing.length === 0) {
+            setThreads(msg.threads);
+          }
           break;
+        }
 
         case 'THREAD_STATE':
           setCurrentState(msg.values);

@@ -26,6 +26,9 @@ export class BridgeManager {
   private _onDone = new vscode.EventEmitter<BridgeResponse>();
   readonly onDone = this._onDone.event;
 
+  private _onStepPause = new vscode.EventEmitter<BridgeResponse>();
+  readonly onStepPause = this._onStepPause.event;
+
   constructor(private extensionUri: vscode.Uri) {
     this.outputChannel = vscode.window.createOutputChannel('VizLang Bridge');
     this.protocol = new BridgeProtocol();
@@ -36,6 +39,9 @@ export class BridgeManager {
     );
     this.protocol.on('interrupt', (msg: BridgeResponse) =>
       this._onInterrupt.fire(msg)
+    );
+    this.protocol.on('step_pause', (msg: BridgeResponse) =>
+      this._onStepPause.fire(msg)
     );
     this.protocol.on('done', (msg: BridgeResponse) => this._onDone.fire(msg));
     this.protocol.on('log', (line: string) =>
@@ -188,6 +194,7 @@ export class BridgeManager {
     this._onStatusChange.dispose();
     this._onStream.dispose();
     this._onInterrupt.dispose();
+    this._onStepPause.dispose();
     this._onDone.dispose();
     this.outputChannel.dispose();
   }

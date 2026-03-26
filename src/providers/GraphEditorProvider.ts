@@ -139,16 +139,35 @@ export class GraphEditorProvider {
         await this.handleResolveInterrupt(msg);
         break;
 
+      case 'RESUME_RUN':
+        await this.handleResumeRun(msg.threadId, msg.stepMode ?? false);
+        break;
+
       case 'CANCEL_RUN':
         await this.bridge.request('cancel', {});
+        this.messageBus?.send({ type: 'RUN_COMPLETE', finalState: null });
         break;
 
       case 'CREATE_THREAD': {
-        const result = (await this.bridge.request('create_thread', {})) as {
-          thread_id: string;
-        };
-        // Refresh thread list
-        await this.refreshThreads();
+        try {
+          const result = (await this.bridge.request('create_thread', {})) as {
+            thread_id: string;
+          };
+          // Send the new thread directly to webview
+          this.messageBus?.send({
+            type: 'THREADS_LIST',
+            threads: [{ threadId: result.thread_id, status: 'idle' as const }],
+          });
+          // Also refresh full list
+          await this.refreshThreads();
+        } catch {
+          // Bridge not ready — create a local thread ID
+          const threadId = 'thread_' + Math.random().toString(36).slice(2, 10);
+          this.messageBus?.send({
+            type: 'THREADS_LIST',
+            threads: [{ threadId, status: 'idle' as const }],
+          });
+        }
         break;
       }
 
@@ -175,6 +194,22 @@ export class GraphEditorProvider {
     input: unknown;
     stepMode: boolean;
   }): Promise<void> {
+    if (!this.bridge.isRunning) {
+      this.messageBus?.send({
+        type: 'RUN_ERROR',
+        error: 'Bridge not running. Load a graph first (Ctrl+Shift+P → "VizLang: Load Graph").',
+      });
+      return;
+    }
+
+    if (!this.currentFile) {
+      this.messageBus?.send({
+        type: 'RUN_ERROR',
+        error: 'No graph loaded. Use Ctrl+Shift+P → "VizLang: Load Graph" first.',
+      });
+      return;
+    }
+
     const streamModes = ['values', 'updates'];
 
     // Set up stream event forwarding
@@ -200,6 +235,15 @@ export class GraphEditorProvider {
       });
     });
 
+    const stepPauseDisposable = this.bridge.onStepPause((response) => {
+      const data = response.data as any;
+      this.messageBus?.send({
+        type: 'STEP_PAUSED',
+        nodeId: data.completed_node || '',
+        nextNodes: data.next_nodes || [],
+      });
+    });
+
     const doneDisposable = this.bridge.onDone(() => {
       this.messageBus?.send({
         type: 'RUN_COMPLETE',
@@ -207,15 +251,27 @@ export class GraphEditorProvider {
       });
       streamDisposable.dispose();
       interruptDisposable.dispose();
+      stepPauseDisposable.dispose();
       doneDisposable.dispose();
     });
 
-    this.bridge.sendRequest('run', {
-      thread_id: msg.threadId,
-      input: msg.input,
-      stream_mode: streamModes,
-      step_mode: msg.stepMode,
-    });
+    try {
+      this.bridge.sendRequest('run', {
+        thread_id: msg.threadId,
+        input: msg.input,
+        stream_mode: streamModes,
+        step_mode: msg.stepMode,
+      });
+    } catch (err: any) {
+      this.messageBus?.send({
+        type: 'RUN_ERROR',
+        error: err.message || 'Failed to start execution',
+      });
+      streamDisposable.dispose();
+      interruptDisposable.dispose();
+      stepPauseDisposable.dispose();
+      doneDisposable.dispose();
+    }
   }
 
   private async handleSendMessage(msg: {
@@ -226,6 +282,58 @@ export class GraphEditorProvider {
       threadId: msg.threadId,
       input: { messages: [{ role: 'human', content: msg.content }] },
       stepMode: false,
+    });
+  }
+
+  private async handleResumeRun(threadId: string, stepMode: boolean): Promise<void> {
+    if (!this.bridge.isRunning) return;
+
+    const streamDisposable = this.bridge.onStream((response) => {
+      this.messageBus?.send({
+        type: 'STREAM_EVENT',
+        mode: response.mode as any,
+        data: response.data,
+      });
+    });
+
+    const interruptDisposable = this.bridge.onInterrupt((response) => {
+      const data = response.data as any;
+      this.messageBus?.send({
+        type: 'INTERRUPT_RECEIVED',
+        interrupt: {
+          id: response.id,
+          value: data.value,
+          nodeId: data.node_id,
+          resumable: data.resumable,
+        },
+        nodeId: data.node_id,
+      });
+    });
+
+    const stepPauseDisposable = this.bridge.onStepPause((response) => {
+      const data = response.data as any;
+      this.messageBus?.send({
+        type: 'STEP_PAUSED',
+        nodeId: data.completed_node || '',
+        nextNodes: data.next_nodes || [],
+      });
+    });
+
+    const doneDisposable = this.bridge.onDone(() => {
+      this.messageBus?.send({ type: 'RUN_COMPLETE', finalState: null });
+      streamDisposable.dispose();
+      interruptDisposable.dispose();
+      stepPauseDisposable.dispose();
+      doneDisposable.dispose();
+    });
+
+    this.messageBus?.send({ type: 'INTERRUPT_RESUMED' });
+
+    this.bridge.sendRequest('resume', {
+      thread_id: threadId,
+      value: null,
+      stream_mode: ['values', 'updates'],
+      step_mode: stepMode,
     });
   }
 

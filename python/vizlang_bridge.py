@@ -47,6 +47,10 @@ def send_interrupt(req_id: str, data: dict) -> None:
     send({"id": req_id, "type": "interrupt", "data": data})
 
 
+def send_step_pause(req_id: str, data: dict) -> None:
+    send({"id": req_id, "type": "step_pause", "data": data})
+
+
 def send_done(req_id: str) -> None:
     send({"id": req_id, "type": "done", "data": None})
 
@@ -71,7 +75,7 @@ def handle_request(req: dict) -> None:
             if graphs:
                 first_name = list(graphs.keys())[0]
                 compiled = graphs[first_name]
-                run_executor = RunExecutor(compiled, send_stream, send_interrupt, send_done)
+                run_executor = RunExecutor(compiled, send_stream, send_interrupt, send_step_pause, send_done)
                 state_manager = StateManager(compiled)
             send_response(req_id, {
                 "success": True,
@@ -111,9 +115,10 @@ def handle_request(req: dict) -> None:
             thread_id = params["thread_id"]
             value = params.get("value")
             stream_modes = params.get("stream_mode", ["values", "updates"])
+            step_mode = params.get("step_mode", False)
             t = threading.Thread(
                 target=run_executor.resume,
-                args=(req_id, thread_id, value, stream_modes),
+                args=(req_id, thread_id, value, stream_modes, step_mode),
             )
             t.daemon = True
             t.start()
@@ -172,7 +177,7 @@ def handle_request(req: dict) -> None:
             if graph_loader.current_graphs:
                 first_name = list(graph_loader.current_graphs.keys())[0]
                 compiled = graph_loader.current_graphs[first_name]
-                run_executor = RunExecutor(compiled, send_stream, send_interrupt, send_done)
+                run_executor = RunExecutor(compiled, send_stream, send_interrupt, send_step_pause, send_done)
                 state_manager = StateManager(compiled)
             send_response(req_id, {"success": True})
 

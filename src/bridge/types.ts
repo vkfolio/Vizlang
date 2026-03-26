@@ -24,7 +24,7 @@ export type BridgeMethod =
   | 'set_checkpointer'
   | 'ping';
 
-export type BridgeResponseType = 'response' | 'stream' | 'interrupt' | 'done' | 'error';
+export type BridgeResponseType = 'response' | 'stream' | 'interrupt' | 'step_pause' | 'done' | 'error';
 
 export interface BridgeResponse {
   id: string;

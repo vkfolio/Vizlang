@@ -10,11 +10,15 @@ export function GraphToolbar() {
   const showDots = useGraphStore((s) => s.showDots);
   const setShowDots = useGraphStore((s) => s.setShowDots);
   const runStatus = useExecutionStore((s) => s.runStatus);
+  const stepMode = useExecutionStore((s) => s.stepMode);
 
   const isRunning = runStatus === 'running';
   const isInterrupted = runStatus === 'interrupted';
 
   const handleRun = () => {
+    useExecutionStore.getState().setStepMode(false);
+    useExecutionStore.getState().reset();
+    useGraphStore.getState().resetNodeStatuses();
     sendMessage({
       type: 'START_RUN',
       threadId: 'default',
@@ -24,6 +28,9 @@ export function GraphToolbar() {
   };
 
   const handleStep = () => {
+    useExecutionStore.getState().setStepMode(true);
+    useExecutionStore.getState().reset();
+    useGraphStore.getState().resetNodeStatuses();
     sendMessage({
       type: 'START_RUN',
       threadId: 'default',
@@ -32,8 +39,13 @@ export function GraphToolbar() {
     });
   };
 
+  const handleNextStep = () => {
+    sendMessage({ type: 'RESUME_RUN', threadId: 'default', stepMode: true });
+  };
+
   const handleContinue = () => {
-    sendMessage({ type: 'RESUME_RUN', threadId: 'default' });
+    useExecutionStore.getState().setStepMode(false);
+    sendMessage({ type: 'RESUME_RUN', threadId: 'default', stepMode: false });
   };
 
   const handleStop = () => {
@@ -99,14 +111,14 @@ export function GraphToolbar() {
           <button
             className="flex items-center gap-1 text-xs bg-node-success/20 text-node-success px-3 py-1 rounded hover:bg-node-success/30 transition-colors"
             onClick={handleRun}
-            title="Run graph (Ctrl+Shift+R)"
+            title="Run graph"
           >
             ▶ Run
           </button>
           <button
             className="flex items-center gap-1 text-xs bg-node-active/20 text-node-active px-3 py-1 rounded hover:bg-node-active/30 transition-colors"
             onClick={handleStep}
-            title="Step through (Ctrl+Shift+S)"
+            title="Step through node by node"
           >
             ⏭ Step
           </button>
@@ -124,13 +136,31 @@ export function GraphToolbar() {
       )}
 
       {isInterrupted && (
-        <button
-          className="flex items-center gap-1 text-xs bg-node-success/20 text-node-success px-3 py-1 rounded hover:bg-node-success/30 transition-colors"
-          onClick={handleContinue}
-          title="Continue execution"
-        >
-          ▶ Continue
-        </button>
+        <div className="flex items-center gap-1.5">
+          {stepMode && (
+            <button
+              className="flex items-center gap-1 text-xs bg-node-active/20 text-node-active px-3 py-1 rounded hover:bg-node-active/30 transition-colors"
+              onClick={handleNextStep}
+              title="Execute next node"
+            >
+              ⏭ Next
+            </button>
+          )}
+          <button
+            className="flex items-center gap-1 text-xs bg-node-success/20 text-node-success px-3 py-1 rounded hover:bg-node-success/30 transition-colors"
+            onClick={handleContinue}
+            title={stepMode ? 'Continue running all remaining nodes' : 'Continue execution'}
+          >
+            ▶ {stepMode ? 'Continue All' : 'Continue'}
+          </button>
+          <button
+            className="flex items-center gap-1 text-xs bg-node-error/20 text-node-error px-3 py-1 rounded hover:bg-node-error/30 transition-colors"
+            onClick={handleStop}
+            title="Stop execution"
+          >
+            ⏹ Stop
+          </button>
+        </div>
       )}
 
       {/* Status indicator */}
@@ -145,7 +175,7 @@ export function GraphToolbar() {
             runStatus === 'interrupted' && 'bg-node-warning animate-pulse'
           )}
         />
-        {runStatus}
+        {runStatus === 'interrupted' && stepMode ? 'stepped' : runStatus}
       </div>
     </div>
   );

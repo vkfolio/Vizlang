@@ -72,6 +72,10 @@ export class BridgeProtocol extends EventEmitter {
         this.emit('interrupt', msg);
         break;
 
+      case 'step_pause':
+        this.emit('step_pause', msg);
+        break;
+
       case 'done': {
         this.emit('done', msg);
         // Also resolve the pending request
