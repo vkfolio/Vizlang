@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+*.vsix
+.vscode-test/
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.sqlite

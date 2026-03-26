@@ -1,0 +1,153 @@
+{
+  "name": "vizlang",
+  "displayName": "VizLang",
+  "description": "Standalone LangGraph development environment — graph visualization, chat, HITL, tracing, and time travel inside VS Code",
+  "version": "0.1.0",
+  "publisher": "vizlang",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Debuggers",
+    "Machine Learning"
+  ],
+  "keywords": [
+    "langgraph",
+    "langchain",
+    "ai",
+    "agent",
+    "graph",
+    "visualization"
+  ],
+  "activationEvents": [
+    "onCommand:vizlang.loadGraph",
+    "onView:vizlang.threads"
+  ],
+  "main": "./dist/extension/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vizlang.loadGraph",
+        "title": "VizLang: Load Graph",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "vizlang.runGraph",
+        "title": "VizLang: Run Graph",
+        "icon": "$(play)"
+      },
+      {
+        "command": "vizlang.stepGraph",
+        "title": "VizLang: Step Through Graph",
+        "icon": "$(debug-step-over)"
+      },
+      {
+        "command": "vizlang.stopGraph",
+        "title": "VizLang: Stop Execution",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "vizlang.createThread",
+        "title": "VizLang: Create Thread",
+        "icon": "$(add)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vizlang",
+          "title": "VizLang",
+          "icon": "media/logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "vizlang": [
+        {
+          "type": "webview",
+          "id": "vizlang.threads",
+          "name": "Threads"
+        },
+        {
+          "type": "webview",
+          "id": "vizlang.trace",
+          "name": "Trace"
+        },
+        {
+          "type": "webview",
+          "id": "vizlang.stateInspector",
+          "name": "State Inspector"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "VizLang",
+      "properties": {
+        "vizlang.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Path to Python interpreter (should have langgraph installed)"
+        },
+        "vizlang.checkpointerType": {
+          "type": "string",
+          "enum": [
+            "memory",
+            "sqlite"
+          ],
+          "default": "memory",
+          "description": "Checkpointer type for thread persistence"
+        },
+        "vizlang.graphLayout": {
+          "type": "string",
+          "enum": [
+            "TB",
+            "LR"
+          ],
+          "default": "TB",
+          "description": "Graph layout direction (top-bottom or left-right)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "tsc --noEmit && vite build",
+    "package": "vsce package",
+    "lint": "eslint src webview shared --ext .ts,.tsx"
+  },
+  "devDependencies": {
+    "@tomjs/vite-plugin-vscode": "^2.6.0",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@types/vscode": "^1.85.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12"
+  },
+  "dependencies": {
+    "@dagrejs/dagre": "^1.1.4",
+    "@radix-ui/react-collapsible": "^1.0.3",
+    "@radix-ui/react-dialog": "^1.0.5",
+    "@radix-ui/react-popover": "^1.0.7",
+    "@radix-ui/react-scroll-area": "^1.0.5",
+    "@radix-ui/react-select": "^2.0.0",
+    "@radix-ui/react-separator": "^1.0.3",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "@radix-ui/react-tooltip": "^1.0.7",
+    "@xyflow/react": "^12.3.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.0",
+    "framer-motion": "^11.0.3",
+    "lucide-react": "^0.312.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^2.2.0",
+    "zustand": "^4.5.0"
+  }
+}

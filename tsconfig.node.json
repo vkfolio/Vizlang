@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "commonjs",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "outDir": "dist",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["shared/*"]
+    }
+  },
+  "include": ["src/**/*", "shared/**/*"]
+}

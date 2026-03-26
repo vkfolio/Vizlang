@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "outDir": "dist",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["shared/*"],
+      "@/*": ["webview/*"]
+    }
+  },
+  "include": ["webview/**/*", "shared/**/*"]
+}

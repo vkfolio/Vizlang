@@ -1,0 +1,165 @@
+/* React Flow overrides for VS Code theme integration */
+
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-node-background-color: var(--card);
+  --xy-node-border-color: var(--border);
+  --xy-node-color: var(--foreground);
+  --xy-edge-stroke: var(--muted-foreground);
+  --xy-minimap-background-color: rgba(0, 0, 0, 0.25);
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-color: var(--muted-foreground);
+  --xy-controls-button-border-color: var(--border);
+}
+
+/* ── MiniMap ─────────────────────────────── */
+.react-flow__minimap {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: blur(8px);
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(255, 255, 255, 0.04);
+  stroke: rgba(255, 255, 255, 0.15);
+  stroke-width: 1;
+}
+
+/* ── Controls ────────────────────────────── */
+.react-flow__controls {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+.react-flow__controls button {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--card) !important;
+  color: var(--muted-foreground) !important;
+  width: 28px;
+  height: 28px;
+}
+
+.react-flow__controls button:hover {
+  background: var(--muted) !important;
+  color: var(--foreground) !important;
+}
+
+.react-flow__controls button:last-child {
+  border-bottom: none;
+}
+
+/* ── Nodes ───────────────────────────────── */
+.vizlang-node {
+  transition: all 0.2s ease;
+}
+
+.vizlang-node:hover {
+  transform: translateY(-1px);
+}
+
+/* Idle state */
+.node-idle {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
+
+.node-idle:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+
+/* Running state */
+.node-status-running {
+  border-color: #3b82f6;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3), 0 0 24px rgba(59, 130, 246, 0.1);
+  animation: running-pulse 2s ease-in-out infinite;
+}
+
+@keyframes running-pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(59, 130, 246, 0.3), 0 0 24px rgba(59, 130, 246, 0.1); }
+  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(59, 130, 246, 0.15); }
+}
+
+/* Completed state */
+.node-status-completed {
+  border-color: rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Error state */
+.node-status-error {
+  border-color: rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Interrupted state */
+.node-status-interrupted {
+  border-color: rgba(245, 158, 11, 0.7);
+  animation: interrupted-pulse 2s ease-in-out infinite;
+}
+
+@keyframes interrupted-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.2); }
+  50% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.35); }
+}
+
+/* Entry node glow */
+.node-entry-glow {
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.12), 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.node-entry-glow:hover {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2), 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* End node glow */
+.node-end-glow {
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.08), 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.node-end-glow:hover {
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.15), 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Spinner for running nodes ───────────── */
+.node-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(59, 130, 246, 0.2);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Edges ───────────────────────────────── */
+.react-flow__edge-path {
+  stroke-width: 1.5;
+}
+
+.react-flow__edge-path.animated {
+  stroke-dasharray: 8;
+  animation: edge-flow 0.8s linear infinite;
+}
+
+@keyframes edge-flow {
+  0% { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* ── Selection ───────────────────────────── */
+.react-flow__node.selected .vizlang-node {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent), 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
