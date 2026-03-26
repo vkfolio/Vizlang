@@ -90,7 +90,7 @@ function CollapsibleNode({
         <span className="text-[10px]">{label}</span>
       </button>
       {expanded && (
-        <div className="ml-3 border-l border-white/5 pl-2">
+        <div className="ml-3 border-l border-border/50 pl-2">
           {entries.map(([key, val]) => (
             <div key={key} className="py-0.5">
               <span className="text-purple-400/80 text-[11px]">{key}</span>

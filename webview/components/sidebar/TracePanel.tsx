@@ -23,7 +23,7 @@ export function TracePanel() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Execution Trace</span>
         <span className="text-[10px] text-muted-foreground">{spans.length} spans</span>
       </div>
@@ -66,7 +66,7 @@ function TraceSpanItem({
 
   return (
     <div className={cn(
-      'border-b border-white/3',
+      'border-b border-border/30',
       isSelected && 'bg-primary/5'
     )}>
       <button

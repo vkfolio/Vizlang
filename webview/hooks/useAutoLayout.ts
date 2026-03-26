@@ -8,12 +8,11 @@ const NODE_HEIGHT = 44;
 
 /**
  * Computes node positions using dagre auto-layout.
- * All nodes use the same width so dagre aligns centers on a straight line.
+ * Always uses horizontal (LR) layout direction.
  */
 export function useAutoLayout() {
   const nodes = useGraphStore((s) => s.nodes);
   const edges = useGraphStore((s) => s.edges);
-  const layoutDirection = useGraphStore((s) => s.layoutDirection);
   const setNodes = useGraphStore((s) => s.setNodes);
 
   useEffect(() => {
@@ -22,14 +21,13 @@ export function useAutoLayout() {
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
     g.setGraph({
-      rankdir: layoutDirection,
+      rankdir: 'TB',
       nodesep: 40,
       ranksep: 50,
       marginx: 20,
       marginy: 20,
     });
 
-    // Use uniform width for all nodes so centers align
     for (const node of nodes) {
       g.setNode(node.id, {
         width: NODE_WIDTH,
@@ -57,5 +55,5 @@ export function useAutoLayout() {
     });
 
     setNodes(layoutedNodes);
-  }, [nodes.length, edges.length, layoutDirection]);
+  }, [nodes.length, edges.length]);
 }

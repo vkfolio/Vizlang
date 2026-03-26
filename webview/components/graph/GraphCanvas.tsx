@@ -42,6 +42,7 @@ function GraphCanvasInner() {
   const setNodes = useGraphStore((s) => s.setNodes);
   const setEdges = useGraphStore((s) => s.setEdges);
   const isLoading = useGraphStore((s) => s.isLoading);
+  const showDots = useGraphStore((s) => s.showDots);
 
   // Hover state for node tooltip
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -202,16 +203,18 @@ function GraphCanvasInner() {
                 }
               }}
               style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                backgroundColor: 'var(--card)',
               }}
-              maskColor="rgba(0, 0, 0, 0.4)"
+              maskColor="var(--muted)"
             />
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={24}
-              size={1.5}
-              color="rgba(255, 255, 255, 0.08)"
-            />
+            {showDots && (
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={24}
+                size={1.5}
+                color="var(--border)"
+              />
+            )}
           </ReactFlow>
 
           {/* State tooltip on hover */}

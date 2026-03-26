@@ -19,19 +19,30 @@ export function AnimatedEdge({
   const runStatus = useExecutionStore((s) => s.runStatus);
   const isRunning = runStatus === 'running';
 
-  // Use a simple straight line when source and target are roughly aligned,
-  // otherwise use a smooth cubic bezier
   const dx = Math.abs(sourceX - targetX);
   const dy = Math.abs(sourceY - targetY);
 
   let edgePath: string;
-  if (dx < 2) {
-    // Perfectly aligned — straight line
-    edgePath = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
+
+  // Determine if layout is vertical (TB) or horizontal (LR) based on positions
+  const isVertical = dy > dx;
+
+  if (isVertical) {
+    // Vertical layout: aligned on X
+    if (dx < 2) {
+      edgePath = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
+    } else {
+      const midY = (sourceY + targetY) / 2;
+      edgePath = `M ${sourceX} ${sourceY} C ${sourceX} ${midY} ${targetX} ${midY} ${targetX} ${targetY}`;
+    }
   } else {
-    // Offset — use smooth bezier
-    const midY = (sourceY + targetY) / 2;
-    edgePath = `M ${sourceX} ${sourceY} C ${sourceX} ${midY} ${targetX} ${midY} ${targetX} ${targetY}`;
+    // Horizontal layout: aligned on Y
+    if (dy < 2) {
+      edgePath = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
+    } else {
+      const midX = (sourceX + targetX) / 2;
+      edgePath = `M ${sourceX} ${sourceY} C ${midX} ${sourceY} ${midX} ${targetY} ${targetX} ${targetY}`;
+    }
   }
 
   return (
@@ -39,7 +50,8 @@ export function AnimatedEdge({
       id={id}
       path={edgePath}
       style={{
-        stroke: 'rgba(255, 255, 255, 0.15)',
+        stroke: 'var(--muted-foreground)',
+        opacity: 0.4,
         strokeWidth: 1.5,
         ...style,
       }}

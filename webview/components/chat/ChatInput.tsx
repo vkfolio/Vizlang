@@ -101,18 +101,18 @@ export function ChatInput() {
   const canSend = (text.trim() || attachments.length > 0) && !disabled;
 
   return (
-    <div className="border-t border-white/5 bg-card/30 p-3">
+    <div className="border-t border-border/50 bg-card/30 p-3">
       {/* Attachment previews */}
       {attachments.length > 0 && (
         <div className="flex gap-2 mb-2 flex-wrap">
           {attachments.map((att, i) => (
             <div key={i} className="relative group">
               {att.preview ? (
-                <div className="w-16 h-16 rounded-lg overflow-hidden border border-white/10 bg-muted/30">
+                <div className="w-16 h-16 rounded-lg overflow-hidden border border-border bg-muted/30">
                   <img src={att.preview} alt={att.file.name} className="w-full h-full object-cover" />
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 bg-muted/30 border border-white/10 rounded-lg px-2.5 py-1.5">
+                <div className="flex items-center gap-1.5 bg-muted/30 border border-border rounded-lg px-2.5 py-1.5">
                   <FileIcon type={att.attachment.type} />
                   <span className="text-[11px] text-foreground/70 max-w-[100px] truncate">
                     {att.file.name}
@@ -122,7 +122,7 @@ export function ChatInput() {
               {/* Remove button */}
               <button
                 onClick={() => removeAttachment(i)}
-                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-card border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-card border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <svg width="8" height="8" viewBox="0 0 8 8" stroke="currentColor" strokeWidth="1.5" fill="none">
                   <path d="M2 2l4 4M6 2l-4 4" />
@@ -134,7 +134,7 @@ export function ChatInput() {
       )}
 
       {/* Input row */}
-      <div className="flex items-end gap-2 bg-muted/30 border border-white/8 rounded-xl px-1 py-1 focus-within:border-accent/30 transition-colors">
+      <div className="flex items-end gap-2 bg-muted/30 border border-border rounded-xl px-1 py-1 focus-within:border-accent/30 transition-colors">
         {/* Attachment button */}
         <button
           onClick={() => fileInputRef.current?.click()}

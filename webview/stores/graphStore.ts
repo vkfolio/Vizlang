@@ -21,6 +21,7 @@ interface GraphState {
   activeGraphName: string | null;
   // Layout
   layoutDirection: 'TB' | 'LR';
+  showDots: boolean;
   // Loading
   isLoading: boolean;
 
@@ -29,6 +30,7 @@ interface GraphState {
   setAvailableGraphs: (graphs: GraphInfo[]) => void;
   setActiveGraph: (name: string) => void;
   setLayoutDirection: (dir: 'TB' | 'LR') => void;
+  setShowDots: (show: boolean) => void;
   setNodeStatus: (nodeId: string, status: GraphNodeData['status']) => void;
   resetNodeStatuses: () => void;
   setNodes: (nodes: Node<GraphNodeData>[]) => void;
@@ -76,6 +78,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   availableGraphs: [],
   activeGraphName: null,
   layoutDirection: 'TB',
+  showDots: true,
   isLoading: false,
 
   setGraphData: (apiNodes, apiEdges) => {
@@ -94,6 +97,8 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   setActiveGraph: (name) => set({ activeGraphName: name }),
 
   setLayoutDirection: (dir) => set({ layoutDirection: dir }),
+
+  setShowDots: (show) => set({ showDots: show }),
 
   setNodeStatus: (nodeId, status) => {
     const nodes = get().nodes.map((n) =>

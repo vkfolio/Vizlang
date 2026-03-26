@@ -23,7 +23,7 @@ export function ThreadsPanel() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Threads</span>
         <button
           onClick={handleCreate}

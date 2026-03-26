@@ -6,7 +6,7 @@
   --xy-node-border-color: var(--border);
   --xy-node-color: var(--foreground);
   --xy-edge-stroke: var(--muted-foreground);
-  --xy-minimap-background-color: rgba(0, 0, 0, 0.25);
+  --xy-minimap-background-color: var(--card);
   --xy-controls-button-background-color: var(--card);
   --xy-controls-button-color: var(--muted-foreground);
   --xy-controls-button-border-color: var(--border);
@@ -15,29 +15,27 @@
 /* ── MiniMap ─────────────────────────────── */
 .react-flow__minimap {
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.25) !important;
-  backdrop-filter: blur(8px);
+  background: var(--card) !important;
 }
 
 .react-flow__minimap-mask {
-  fill: rgba(255, 255, 255, 0.04);
-  stroke: rgba(255, 255, 255, 0.15);
+  fill: var(--muted);
+  stroke: var(--border);
   stroke-width: 1;
 }
 
 /* ── Controls ────────────────────────────── */
 .react-flow__controls {
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .react-flow__controls button {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border);
   background: var(--card) !important;
   color: var(--muted-foreground) !important;
   width: 28px;
@@ -64,14 +62,14 @@
 
 /* Idle state */
 .node-idle {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--border);
   background: var(--card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .node-idle:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  border-color: var(--muted-foreground);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Running state */
@@ -89,13 +87,13 @@
 /* Completed state */
 .node-status-completed {
   border-color: rgba(34, 197, 94, 0.6);
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.15);
 }
 
 /* Error state */
 .node-status-error {
   border-color: rgba(239, 68, 68, 0.7);
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2), 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
 }
 
 /* Interrupted state */
@@ -111,20 +109,20 @@
 
 /* Entry node glow */
 .node-entry-glow {
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.12), 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.12), 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .node-entry-glow:hover {
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2), 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* End node glow */
 .node-end-glow {
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.08), 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .node-end-glow:hover {
-  box-shadow: 0 0 16px rgba(239, 68, 68, 0.15), 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.15), 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* ── Spinner for running nodes ───────────── */
@@ -160,6 +158,5 @@
 /* ── Selection ───────────────────────────── */
 .react-flow__node.selected .vizlang-node {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 2px var(--accent), 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 0 0 2px var(--accent) !important;
 }
-

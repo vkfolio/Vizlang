@@ -22,14 +22,14 @@ export function StatePanel() {
   return (
     <div className="flex flex-col h-full">
       {/* Header with search */}
-      <div className="px-3 py-2 border-b border-white/5 space-y-2">
+      <div className="px-3 py-2 border-b border-border/50 space-y-2">
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">State Inspector</span>
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter keys..."
-          className="w-full bg-muted/30 border border-white/5 rounded px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-accent/50"
+          className="w-full bg-muted/30 border border-border/50 rounded px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-accent/50"
         />
       </div>
 

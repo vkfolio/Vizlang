@@ -17,9 +17,9 @@ export function RightSidebar({ isOpen, onClose }: RightSidebarProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="flex flex-col h-full border-l border-white/5 bg-card/20" style={{ width: 280 }}>
+    <div className="flex flex-col h-full border-l border-border/50 bg-card/20" style={{ width: 280 }}>
       {/* Tab bar */}
-      <div className="flex items-center border-b border-white/5 flex-shrink-0">
+      <div className="flex items-center border-b border-border/50 flex-shrink-0">
         {(['threads', 'trace', 'state'] as const).map((tab) => (
           <button
             key={tab}

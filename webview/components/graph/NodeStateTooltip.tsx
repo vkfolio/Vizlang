@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { useExecutionStore } from '@/stores/executionStore';
 
 interface NodeStateTooltipProps {
@@ -10,7 +10,6 @@ interface NodeStateTooltipProps {
 
 export function NodeStateTooltip({ nodeId, anchor, onMouseEnter, onMouseLeave }: NodeStateTooltipProps) {
   const nodeState = useExecutionStore((s) => s.nodeStates[nodeId]);
-  const tooltipRef = useRef<HTMLDivElement>(null);
 
   if (!nodeState || (!nodeState.outputs && !nodeState.inputs && !nodeState.stateAfter)) {
     return null;
@@ -25,10 +24,8 @@ export function NodeStateTooltip({ nodeId, anchor, onMouseEnter, onMouseLeave }:
 
   return (
     <div
-      ref={tooltipRef}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className="node-state-tooltip"
       style={{
         position: 'fixed',
         left: anchor.x + 20,
@@ -38,11 +35,19 @@ export function NodeStateTooltip({ nodeId, anchor, onMouseEnter, onMouseLeave }:
         maxHeight: 380,
       }}
     >
-      <div className="bg-[#1e1e2e]/95 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: 380 }}>
+      <div
+        className="rounded-lg shadow-2xl overflow-hidden flex flex-col"
+        style={{
+          maxHeight: 380,
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
         {/* Header */}
-        <div className="px-3 py-1.5 border-b border-white/5 flex items-center gap-2 flex-shrink-0">
+        <div className="px-3 py-1.5 flex items-center gap-2 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="w-1.5 h-1.5 rounded-full bg-node-active" />
-          <span className="text-[11px] font-mono text-foreground/70">{nodeId}</span>
+          <span className="text-[11px] font-mono" style={{ color: 'var(--muted-foreground)' }}>{nodeId}</span>
         </div>
 
         {/* Scrollable content */}
@@ -52,13 +57,13 @@ export function NodeStateTooltip({ nodeId, anchor, onMouseEnter, onMouseLeave }:
           onWheel={(e) => e.stopPropagation()}
         >
           {sections.map((section) => (
-            <div key={section.label} className="border-b border-white/5 last:border-b-0">
-              <div className="px-3 py-1 bg-white/[0.02]">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div key={section.label} style={{ borderBottom: '1px solid var(--border)' }} className="last:border-b-0">
+              <div className="px-3 py-1" style={{ background: 'var(--muted)' }}>
+                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
                   {section.label}
                 </span>
               </div>
-              <pre className="px-3 py-2 text-[11px] font-mono text-foreground/80 whitespace-pre-wrap break-all leading-relaxed">
+              <pre className="px-3 py-2 text-[11px] font-mono overflow-auto max-h-[260px] whitespace-pre-wrap break-all leading-relaxed" style={{ color: 'var(--foreground)' }}>
                 {formatData(section.data)}
               </pre>
             </div>

@@ -60,7 +60,7 @@ export function BaseNode({
       <Handle
         type="target"
         position={isHorizontal ? Position.Left : Position.Top}
-        style={{ left: isHorizontal ? undefined : '50%' }}
+        style={isHorizontal ? { top: '50%' } : { left: '50%' }}
         className="!bg-muted-foreground/60 !border-none !w-2 !h-2 hover:!bg-foreground hover:!w-2.5 hover:!h-2.5 !transition-all"
       />
 
@@ -93,7 +93,7 @@ export function BaseNode({
       <Handle
         type="source"
         position={isHorizontal ? Position.Right : Position.Bottom}
-        style={{ left: isHorizontal ? undefined : '50%' }}
+        style={isHorizontal ? { top: '50%' } : { left: '50%' }}
         className="!bg-muted-foreground/60 !border-none !w-2 !h-2 hover:!bg-foreground hover:!w-2.5 hover:!h-2.5 !transition-all"
       />
     </div>

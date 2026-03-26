@@ -5,10 +5,10 @@ import { useExecutionStore } from '@/stores/executionStore';
 import { sendMessage } from '@/bridge/MessageBus';
 
 export function GraphToolbar() {
-  const layoutDirection = useGraphStore((s) => s.layoutDirection);
-  const setLayoutDirection = useGraphStore((s) => s.setLayoutDirection);
   const availableGraphs = useGraphStore((s) => s.availableGraphs);
   const activeGraphName = useGraphStore((s) => s.activeGraphName);
+  const showDots = useGraphStore((s) => s.showDots);
+  const setShowDots = useGraphStore((s) => s.setShowDots);
   const runStatus = useExecutionStore((s) => s.runStatus);
 
   const isRunning = runStatus === 'running';
@@ -52,7 +52,7 @@ export function GraphToolbar() {
             useGraphStore.getState().setActiveGraph(name);
             sendMessage({
               type: 'LOAD_GRAPH',
-              filePath: '', // Will use current file
+              filePath: '',
               graphVar: name,
             });
           }}
@@ -67,15 +67,28 @@ export function GraphToolbar() {
 
       <div className="flex-1" />
 
-      {/* Layout toggle */}
+      {/* Dots toggle */}
       <button
-        className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors"
-        onClick={() =>
-          setLayoutDirection(layoutDirection === 'TB' ? 'LR' : 'TB')
-        }
-        title="Toggle layout direction"
+        className={cn(
+          'text-xs px-2 py-1 rounded transition-colors',
+          showDots
+            ? 'text-foreground bg-muted'
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+        )}
+        onClick={() => setShowDots(!showDots)}
+        title="Toggle background dots"
       >
-        {layoutDirection === 'TB' ? '↕ Vertical' : '↔ Horizontal'}
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" className="opacity-70">
+          <circle cx="3" cy="3" r="1" />
+          <circle cx="7" cy="3" r="1" />
+          <circle cx="11" cy="3" r="1" />
+          <circle cx="3" cy="7" r="1" />
+          <circle cx="7" cy="7" r="1" />
+          <circle cx="11" cy="7" r="1" />
+          <circle cx="3" cy="11" r="1" />
+          <circle cx="7" cy="11" r="1" />
+          <circle cx="11" cy="11" r="1" />
+        </svg>
       </button>
 
       <div className="w-px h-4 bg-border" />

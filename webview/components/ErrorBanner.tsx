@@ -53,7 +53,7 @@ export function ErrorBanner() {
                 Traceback
               </button>
               {showTraceback && (
-                <pre className="mt-1 text-[10px] font-mono text-foreground/60 bg-black/20 rounded p-2 overflow-auto max-h-[150px] whitespace-pre-wrap">
+                <pre className="mt-1 text-[10px] font-mono text-foreground/60 bg-muted rounded p-2 overflow-auto max-h-[150px] whitespace-pre-wrap">
                   {lastError.traceback}
                 </pre>
               )}

@@ -73,7 +73,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               'rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed',
               isHuman
                 ? 'bg-primary text-primary-foreground rounded-br-md'
-                : 'bg-card border border-white/5 rounded-bl-md'
+                : 'bg-card border border-border/50 rounded-bl-md'
             )}
           >
             <div className="whitespace-pre-wrap break-words">{message.content}</div>
@@ -90,7 +90,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 function AttachmentPreview({ attachment }: { attachment: { type: string; name: string; mimeType: string; data: string } }) {
   if (attachment.type === 'image') {
     return (
-      <div className="w-48 rounded-xl overflow-hidden border border-white/10">
+      <div className="w-48 rounded-xl overflow-hidden border border-border">
         <img
           src={`data:${attachment.mimeType};base64,${attachment.data}`}
           alt={attachment.name}
@@ -102,7 +102,7 @@ function AttachmentPreview({ attachment }: { attachment: { type: string; name: s
 
   if (attachment.type === 'audio') {
     return (
-      <div className="bg-card border border-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
+      <div className="bg-card border border-border rounded-xl px-3 py-2 flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-purple-400/70 flex-shrink-0">
           <path d="M4 6v4M6 4v8M8 5v6M10 3v10M12 6v4" />
         </svg>
@@ -112,7 +112,7 @@ function AttachmentPreview({ attachment }: { attachment: { type: string; name: s
   }
 
   return (
-    <div className="bg-card border border-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
+    <div className="bg-card border border-border rounded-xl px-3 py-2 flex items-center gap-2">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2" className="text-blue-400/70 flex-shrink-0">
         <path d="M8 1.5H3.5a1 1 0 00-1 1v9a1 1 0 001 1h7a1 1 0 001-1V5L8 1.5z" />
         <path d="M8 1.5V5h3.5" />
