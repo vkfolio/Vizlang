@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="media/logo.svg" width="80" height="80" alt="VizLang" />
-</p>
-
 <h1 align="center">VizLang</h1>
 
 <p align="center">
@@ -22,10 +18,7 @@
 
 <br />
 
-<!-- screenshot: hero-graph-view -->
-<p align="center">
-  <img src="docs/screenshots/hero.png" width="800" alt="VizLang showing a LangGraph agent with nodes lighting up during execution" />
-</p>
+<!-- screenshot: hero-graph-view (add hero.png to docs/screenshots/) -->
 
 <br />
 

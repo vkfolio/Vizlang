@@ -43,6 +43,9 @@ export function ThreadsPanel() {
   };
 
   const handleClearDefault = () => {
+    // Clear Python-side thread state
+    sendMessage({ type: 'DELETE_THREAD', threadId: 'default' });
+    // Clear webview-side state
     useChatStore.getState().clear();
     useChatStore.getState().clearThread('default');
     clearRunState();

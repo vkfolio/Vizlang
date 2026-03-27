@@ -241,7 +241,24 @@ def handle_request(req: dict) -> None:
             send_response(req_id, {"threads": threads})
 
         elif method == "delete_thread":
-            # MemorySaver doesn't support deletion directly
+            thread_id = params.get("thread_id", "")
+            # Clear thread state from MemorySaver storage
+            if run_executor and thread_id:
+                checkpointer = getattr(run_executor.graph, "checkpointer", None)
+                storage = getattr(checkpointer, "storage", None)
+                if storage and isinstance(storage, dict):
+                    # MemorySaver uses thread_id as direct key or as tuple first element
+                    if thread_id in storage:
+                        del storage[thread_id]
+                    keys_to_delete = [k for k in storage if isinstance(k, tuple) and len(k) >= 1 and k[0] == thread_id]
+                    for k in keys_to_delete:
+                        del storage[k]
+                # Also clear writes storage if it exists
+                writes = getattr(checkpointer, "writes", None)
+                if writes and isinstance(writes, dict):
+                    keys_to_delete = [k for k in writes if isinstance(k, tuple) and len(k) >= 1 and k[0] == thread_id]
+                    for k in keys_to_delete:
+                        del writes[k]
             send_response(req_id, {"deleted": True})
 
         elif method == "set_checkpointer":
