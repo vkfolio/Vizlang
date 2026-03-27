@@ -237,18 +237,22 @@ export class GraphEditorProvider {
     input: unknown;
     stepMode: boolean;
   }): Promise<void> {
+    console.log(`[VizLang] handleStartRun called — bridge running: ${this.bridge.isRunning}, file: ${this.currentFile}, stepMode: ${msg.stepMode}`);
+
     if (!this.bridge.isRunning) {
+      console.log('[VizLang] Bridge not running, sending error');
       this.messageBus?.send({
         type: 'RUN_ERROR',
-        error: 'Bridge not running. Load a graph first (Ctrl+Shift+P → "VizLang: Load Graph").',
+        error: 'Bridge not running. Load a graph first.',
       });
       return;
     }
 
     if (!this.currentFile) {
+      console.log('[VizLang] No current file, sending error');
       this.messageBus?.send({
         type: 'RUN_ERROR',
-        error: 'No graph loaded. Use Ctrl+Shift+P → "VizLang: Load Graph" first.',
+        error: 'No graph loaded.',
       });
       return;
     }
@@ -299,13 +303,16 @@ export class GraphEditorProvider {
     });
 
     try {
+      console.log(`[VizLang] Sending run request — threadId: ${msg.threadId}, input: ${JSON.stringify(msg.input)}, stepMode: ${msg.stepMode}`);
       this.bridge.sendRequest('run', {
         thread_id: msg.threadId,
         input: msg.input,
         stream_mode: streamModes,
         step_mode: msg.stepMode,
       });
+      console.log('[VizLang] Run request sent successfully');
     } catch (err: any) {
+      console.error(`[VizLang] Run request failed: ${err.message}`);
       this.messageBus?.send({
         type: 'RUN_ERROR',
         error: err.message || 'Failed to start execution',
@@ -323,7 +330,7 @@ export class GraphEditorProvider {
   }): Promise<void> {
     await this.handleStartRun({
       threadId: msg.threadId,
-      input: { messages: [{ role: 'human', content: msg.content }] },
+      input: { messages: [{ type: 'human', content: msg.content }] },
       stepMode: false,
     });
   }

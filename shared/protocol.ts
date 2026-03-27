@@ -25,7 +25,7 @@ export interface GraphInfo {
 
 // --- Execution Types ---
 
-export type StreamMode = 'values' | 'updates' | 'messages' | 'debug' | 'custom';
+export type StreamMode = 'values' | 'updates' | 'messages' | 'debug' | 'custom' | 'error';
 
 export type RunStatus = 'idle' | 'running' | 'completed' | 'error' | 'interrupted';
 

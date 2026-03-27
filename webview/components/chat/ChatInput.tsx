@@ -34,6 +34,9 @@ export function ChatInput() {
       attachments: messageAttachments.length > 0 ? messageAttachments : undefined,
     });
 
+    // Add thinking indicator immediately
+    addMessage({ role: 'ai', content: '', thinking: 'Thinking...' });
+
     sendMessage({
       type: 'SEND_MESSAGE',
       threadId: activeThreadId,

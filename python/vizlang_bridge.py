@@ -16,6 +16,36 @@ from run_executor import RunExecutor
 from state_manager import StateManager
 from utils import serialize
 
+def convert_input_messages(input_data: Any) -> Any:
+    """Convert message dicts with 'role' key to LangChain message objects."""
+    if not isinstance(input_data, dict):
+        return input_data
+    if "messages" not in input_data:
+        return input_data
+    msgs = input_data.get("messages", [])
+    if not isinstance(msgs, list):
+        return input_data
+
+    from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+
+    converted = []
+    for m in msgs:
+        if not isinstance(m, dict):
+            converted.append(m)
+            continue
+        role = m.get("role") or m.get("type") or ""
+        content = m.get("content", "")
+        if role in ("human", "user"):
+            converted.append(HumanMessage(content=content))
+        elif role in ("ai", "assistant"):
+            converted.append(AIMessage(content=content))
+        elif role in ("system",):
+            converted.append(SystemMessage(content=content))
+        else:
+            converted.append(HumanMessage(content=content))
+    return {**input_data, "messages": converted}
+
+
 # Globals
 graph_loader = GraphLoader()
 run_executor: RunExecutor | None = None
@@ -98,6 +128,13 @@ def handle_request(req: dict) -> None:
                 return
             thread_id = params.get("thread_id", str(uuid.uuid4()))
             input_data = params.get("input", {})
+            print(f"[vizlang_bridge] run request — thread: {thread_id}, input: {input_data}", file=sys.stderr)
+            # Convert message dicts to LangChain message objects
+            input_data = convert_input_messages(input_data)
+            print(f"[vizlang_bridge] converted input: {input_data}", file=sys.stderr)
+            # If input is empty, check if graph has existing state (resume from checkpoint)
+            if input_data == {} or input_data is None:
+                input_data = None
             stream_modes = params.get("stream_mode", ["values", "updates"])
             step_mode = params.get("step_mode", False)
             # Run in a separate thread to not block stdin reading

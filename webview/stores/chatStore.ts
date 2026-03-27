@@ -7,6 +7,8 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
   isStreaming?: boolean;
+  /** Shows a "thinking/processing" indicator instead of content */
+  thinking?: string;
   toolName?: string;
   toolArgs?: unknown;
   attachments?: Attachment[];
@@ -15,9 +17,11 @@ export interface ChatMessage {
 interface ChatState {
   messages: ChatMessage[];
   isStreaming: boolean;
+  showToolCalls: boolean;
   /** Per-thread message cache so switching threads preserves history */
   threadMessages: Record<string, ChatMessage[]>;
 
+  setShowToolCalls: (show: boolean) => void;
   addMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
   appendToLastMessage: (content: string) => void;
   setMessages: (msgs: ChatMessage[]) => void;
@@ -34,7 +38,10 @@ let msgCounter = 0;
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   isStreaming: false,
+  showToolCalls: true,
   threadMessages: {},
+
+  setShowToolCalls: (show) => set({ showToolCalls: show }),
 
   addMessage: (msg) => {
     const message: ChatMessage = {

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import type { ChatMessage as ChatMessageType } from '@/stores/chatStore';
 
@@ -8,6 +10,22 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const [expanded, setExpanded] = useState(false);
+
+  // Thinking/processing indicator
+  if (message.thinking) {
+    return (
+      <div className="flex justify-start px-4 py-2">
+        <div className="flex items-center gap-2 bg-card border border-border/50 rounded-2xl rounded-bl-md px-3.5 py-2.5">
+          <div className="flex gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+          <span className="text-[12px] text-muted-foreground italic">{message.thinking}</span>
+        </div>
+      </div>
+    );
+  }
 
   if (message.role === 'system') {
     return (
@@ -76,7 +94,15 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 : 'bg-card border border-border/50 rounded-bl-md'
             )}
           >
-            <div className="whitespace-pre-wrap break-words">{message.content}</div>
+            {isHuman ? (
+              <div className="whitespace-pre-wrap break-words">{message.content}</div>
+            ) : (
+              <div className="prose-chat break-words">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            )}
             {message.isStreaming && (
               <span className="streaming-cursor inline-block ml-0.5" />
             )}

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { onMessage } from '../bridge/MessageBus';
 import { useGraphStore } from '../stores/graphStore';
 import { useExecutionStore } from '../stores/executionStore';
-import { useChatStore } from '../stores/chatStore';
+import { useChatStore, type ChatMessage as ChatMessageType } from '../stores/chatStore';
 import { useThreadStore } from '../stores/threadStore';
 import { useTraceStore } from '../stores/traceStore';
 import type { HostMessage } from '../../shared/protocol';
@@ -61,7 +61,26 @@ export function useStreamHandler() {
           if (msg.mode === 'updates' && typeof msg.data === 'object' && msg.data !== null) {
             const data = msg.data as Record<string, unknown>;
             const nodeId = Object.keys(data)[0];
-            if (nodeId && nodeId !== '__start__' && nodeId !== '__end__') {
+
+            // When __start__ completes, the first real node is about to run
+            if (nodeId === '__start__') {
+              setNodeStatus('__start__', 'completed');
+              // Update existing thinking or add new one
+              const hasThinking = useChatStore.getState().messages.some((m: ChatMessageType) => m.thinking);
+              if (hasThinking) {
+                useChatStore.setState((s) => {
+                  const msgs = s.messages.map((m: ChatMessageType) =>
+                    m.thinking ? { ...m, thinking: 'Running graph...' } : m
+                  );
+                  return { messages: msgs };
+                });
+              } else {
+                chatAddMessage({ role: 'ai', content: '', thinking: 'Running graph...' });
+              }
+            } else if (nodeId && nodeId !== '__end__') {
+              // Real node completed — update thinking to show next node or remove
+              setNodeStatus('__start__', 'completed');
+
               // Complete previous span
               const prevNode = useExecutionStore.getState().activeNodeId;
               if (prevNode && prevNode !== nodeId) {
@@ -72,6 +91,14 @@ export function useStreamHandler() {
               setActiveNode(nodeId);
               setNodeStatus(nodeId, 'running');
               updateNodeState(nodeId, { outputs: data[nodeId] });
+
+              // Update thinking to show which node is processing
+              useChatStore.setState((s) => {
+                const msgs = s.messages.map((m: ChatMessageType) =>
+                  m.thinking ? { ...m, thinking: `Processing ${nodeId}...` } : m
+                );
+                return { messages: msgs };
+              });
 
               // Add trace span
               traceAddSpan({
@@ -84,6 +111,18 @@ export function useStreamHandler() {
                 children: [],
               });
             }
+          }
+
+          // Handle error mode from Python bridge
+          if (msg.mode === 'error' && typeof msg.data === 'object' && msg.data !== null) {
+            const errData = msg.data as { message?: string; traceback?: string };
+            setRunStatus('error');
+            setError({
+              message: errData.message || 'Unknown error',
+              traceback: errData.traceback,
+            });
+            chatSetStreaming(false);
+            break;
           }
 
           if (msg.mode === 'values' && typeof msg.data === 'object') {
@@ -103,22 +142,59 @@ export function useStreamHandler() {
               const lastMsg = stateData.messages[stateData.messages.length - 1];
               if (lastMsg && typeof lastMsg === 'object') {
                 const msgObj = lastMsg as any;
-                const role = msgObj.type === 'human' ? 'human' as const : 'ai' as const;
+                // Detect human messages by type field or class name
+                const msgType = (msgObj.type || msgObj.role || '').toLowerCase();
+                const isHuman = msgType === 'human' || msgType === 'humanmessage' || msgType === 'user';
+                // Also skip if content matches the last human message (duplicate echo)
                 const content = typeof msgObj.content === 'string' ? msgObj.content : JSON.stringify(msgObj.content);
-                // Only add if it's a new AI message
-                if (role === 'ai') {
-                  const existing = useChatStore.getState().messages;
-                  const lastExisting = existing[existing.length - 1];
-                  if (!lastExisting || lastExisting.role !== 'ai' || !lastExisting.isStreaming) {
-                    chatAddMessage({ role: 'ai', content, isStreaming: true });
-                  } else {
-                    // Update content of streaming message
-                    chatAppend(''); // trigger re-render
-                    useChatStore.setState((s) => {
-                      const msgs = [...s.messages];
-                      msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content };
-                      return { messages: msgs };
+                const chatMsgs = useChatStore.getState().messages;
+                const lastHuman = [...chatMsgs].reverse().find((m) => m.role === 'human');
+                const isDuplicateEcho = lastHuman && lastHuman.content === content;
+                if (!isHuman && !isDuplicateEcho) {
+                  // Remove thinking message before adding real content
+                  useChatStore.setState((s) => {
+                    const msgs = s.messages.filter((m: ChatMessageType) => !m.thinking);
+                    return msgs.length !== s.messages.length ? { messages: msgs } : {};
+                  });
+
+                  // Check for tool calls
+                  const toolCalls = msgObj.tool_calls
+                    || msgObj.additional_kwargs?.tool_calls
+                    || [];
+                  if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+                    for (const tc of toolCalls) {
+                      const tcName = tc.name || tc.function?.name || 'tool';
+                      const tcArgs = tc.args || tc.function?.arguments || '';
+                      chatAddMessage({
+                        role: 'tool',
+                        content: typeof tcArgs === 'string' ? tcArgs : JSON.stringify(tcArgs, null, 2),
+                        toolName: tcName,
+                        toolArgs: tcArgs,
+                      });
+                    }
+                  }
+
+                  // Check for tool message type (tool results)
+                  const isToolMsg = msgType === 'tool' || msgType === 'toolmessage';
+                  if (isToolMsg) {
+                    chatAddMessage({
+                      role: 'tool',
+                      content: content,
+                      toolName: msgObj.name || msgObj.tool_call_id || 'tool_result',
                     });
+                  } else if (content) {
+                    const existing = useChatStore.getState().messages;
+                    const lastExisting = existing[existing.length - 1];
+                    if (!lastExisting || lastExisting.role !== 'ai' || !lastExisting.isStreaming) {
+                      chatAddMessage({ role: 'ai', content, isStreaming: true });
+                    } else {
+                      // Update content of streaming message
+                      useChatStore.setState((s) => {
+                        const msgs = [...s.messages];
+                        msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content };
+                        return { messages: msgs };
+                      });
+                    }
                   }
                 }
               }
@@ -149,9 +225,16 @@ export function useStreamHandler() {
             traceCompleteSpan(lastNode, useExecutionStore.getState().nodeStates[lastNode]?.outputs);
             setNodeStatus(lastNode, 'completed');
           }
+          // Mark __end__ as completed
+          setNodeStatus('__end__', 'completed');
           setRunStatus('completed');
           setActiveNode(null);
           chatSetStreaming(false);
+          // Remove any remaining thinking messages
+          useChatStore.setState((s) => {
+            const msgs = s.messages.filter((m: ChatMessageType) => !m.thinking);
+            return msgs.length !== s.messages.length ? { messages: msgs } : {};
+          });
           break;
         }
 

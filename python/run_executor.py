@@ -49,7 +49,27 @@ class RunExecutor:
         step_mode: bool = False,
     ) -> None:
         """Common streaming logic for execute and resume."""
+        import sys
+        print(f"[run_executor] _run_stream called — input: {input_data}, step_mode: {step_mode}", file=sys.stderr)
         try:
+            # If no input provided, check if graph has existing state to resume
+            if input_data is None:
+                try:
+                    existing = self.graph.get_state(config)
+                    if not existing or not existing.values:
+                        # No state and no input — graph needs input
+                        self.send_stream(req_id, "error", {
+                            "message": "Graph requires input to start. Use Chat to send a message, or provide input.",
+                        })
+                        self.send_done(req_id)
+                        return
+                except Exception:
+                    self.send_stream(req_id, "error", {
+                        "message": "Graph requires input to start. Use Chat to send a message.",
+                    })
+                    self.send_done(req_id)
+                    return
+
             # Build stream kwargs
             stream_kwargs: dict[str, Any] = {
                 "stream_mode": stream_modes if len(stream_modes) > 1 else stream_modes[0],
