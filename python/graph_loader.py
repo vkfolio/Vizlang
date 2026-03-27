@@ -165,4 +165,103 @@ class GraphLoader:
             if node["id"] in conditional_sources and node["type"] == "process":
                 node["type"] = "conditional"
 
-        return {"nodes": nodes, "edges": edges}
+        # Extract state schema and generate sample input
+        input_schema = {}
+        sample_input = {}
+        try:
+            input_schema, sample_input = self._extract_schema(graph)
+        except Exception as e:
+            print(f"[graph_loader] Could not extract schema: {e}", file=sys.stderr)
+
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "inputSchema": input_schema,
+            "sampleInput": sample_input,
+        }
+
+    @staticmethod
+    def _extract_schema(graph: CompiledStateGraph) -> tuple[dict[str, str], dict[str, Any]]:
+        """Extract state schema from graph builder annotations.
+        Returns (input_schema, sample_input).
+        """
+        import typing
+
+        schemas = getattr(graph.builder, 'schemas', {})
+        if not schemas:
+            return {}, {}
+
+        # Get the first (usually only) state class
+        state_cls = next(iter(schemas.keys()))
+        annotations = getattr(state_cls, '__annotations__', {})
+        if not annotations:
+            return {}, {}
+
+        input_schema: dict[str, str] = {}
+        sample_input: dict[str, Any] = {}
+
+        for field_name, type_hint in annotations.items():
+            # Unwrap Annotated (check for __metadata__ attribute)
+            type_hint = GraphLoader._unwrap_annotated(type_hint)
+
+            # Get readable type name
+            type_str = GraphLoader._type_to_str(type_hint)
+            input_schema[field_name] = type_str
+            sample_input[field_name] = GraphLoader._default_for_type(type_hint)
+
+        return input_schema, sample_input
+
+    @staticmethod
+    def _unwrap_annotated(t: Any) -> Any:
+        """Unwrap Annotated[X, ...] to X."""
+        if hasattr(t, '__metadata__'):
+            args = getattr(t, '__args__', ())
+            return args[0] if args else t
+        return t
+
+    @staticmethod
+    def _type_to_str(t: Any) -> str:
+        """Convert a type hint to a readable string."""
+        import typing
+        t = GraphLoader._unwrap_annotated(t)
+        origin = getattr(t, '__origin__', None)
+        args = getattr(t, '__args__', ())
+
+        if origin is list or (origin is not None and getattr(origin, '__name__', '') == 'List'):
+            inner = GraphLoader._type_to_str(args[0]) if args else 'any'
+            return f"list[{inner}]"
+        elif origin is dict:
+            k = GraphLoader._type_to_str(args[0]) if len(args) > 0 else 'str'
+            v = GraphLoader._type_to_str(args[1]) if len(args) > 1 else 'any'
+            return f"dict[{k},{v}]"
+        elif t is str:
+            return "string"
+        elif t is int:
+            return "integer"
+        elif t is float:
+            return "number"
+        elif t is bool:
+            return "boolean"
+        elif hasattr(t, '__name__'):
+            return t.__name__
+        return str(t)
+
+    @staticmethod
+    def _default_for_type(t: Any) -> Any:
+        """Generate a default sample value for a type."""
+        t = GraphLoader._unwrap_annotated(t)
+        origin = getattr(t, '__origin__', None)
+
+        if origin is list or (origin is not None and getattr(origin, '__name__', '') == 'List'):
+            return []
+        elif origin is dict:
+            return {}
+        elif t is str:
+            return ""
+        elif t is int:
+            return 0
+        elif t is float:
+            return 0.0
+        elif t is bool:
+            return False
+        return None

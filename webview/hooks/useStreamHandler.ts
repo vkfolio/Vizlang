@@ -38,7 +38,7 @@ export function useStreamHandler() {
     const unsubscribe = onMessage((msg: HostMessage) => {
       switch (msg.type) {
         case 'GRAPH_DATA':
-          setGraphData(msg.nodes, msg.edges);
+          setGraphData(msg.nodes, msg.edges, msg.inputSchema, msg.sampleInput);
           break;
 
         case 'GRAPHS_LIST':

@@ -117,6 +117,8 @@ export class GraphEditorProvider {
         type: 'GRAPH_DATA',
         nodes: graphData.nodes,
         edges: graphData.edges,
+        inputSchema: graphData.inputSchema,
+        sampleInput: graphData.sampleInput,
       });
 
       // Verify bridge is responsive before declaring ready
@@ -377,16 +379,15 @@ export class GraphEditorProvider {
     threadId: string;
     content: string;
     attachments?: Array<{ type: string; name: string; mimeType: string; data: string }>;
+    extraInput?: Record<string, unknown>;
   }): Promise<void> {
     // Build multimodal content array if attachments present
     let messageContent: unknown;
     if (msg.attachments && msg.attachments.length > 0) {
       const contentParts: unknown[] = [];
-      // Add text part if present
       if (msg.content) {
         contentParts.push({ type: 'text', text: msg.content });
       }
-      // Add attachment parts
       for (const att of msg.attachments) {
         if (att.type === 'image') {
           contentParts.push({
@@ -401,7 +402,6 @@ export class GraphEditorProvider {
             mime_type: att.mimeType,
           });
         } else {
-          // Generic file — send as text with file content
           contentParts.push({
             type: 'text',
             text: `[File: ${att.name}]\n${Buffer.from(att.data, 'base64').toString('utf-8')}`,
@@ -413,9 +413,19 @@ export class GraphEditorProvider {
       messageContent = msg.content;
     }
 
+    // Build input: messages + any extra fields from schema
+    const input: Record<string, unknown> = {
+      messages: [{ type: 'human', content: messageContent }],
+    };
+
+    // Merge extra input fields (e.g., amount, category, etc.)
+    if (msg.extraInput) {
+      Object.assign(input, msg.extraInput);
+    }
+
     await this.handleStartRun({
       threadId: msg.threadId,
-      input: { messages: [{ type: 'human', content: messageContent }] },
+      input,
       stepMode: false,
     });
   }

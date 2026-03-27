@@ -13,10 +13,14 @@ export function GraphToolbar() {
   const runStatus = useExecutionStore((s) => s.runStatus);
   const stepMode = useExecutionStore((s) => s.stepMode);
 
+  const sampleInput = useGraphStore((s) => s.sampleInput);
+  const inputSchema = useGraphStore((s) => s.inputSchema);
+
   const [showInput, setShowInput] = useState(false);
   const [pendingStepMode, setPendingStepMode] = useState(false);
   const [inputText, setInputText] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [jsonError, setJsonError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const isRunning = runStatus === 'running';
   const isInterrupted = runStatus === 'interrupted';
@@ -28,14 +32,30 @@ export function GraphToolbar() {
   }, [showInput]);
 
   const executeRun = (text: string, step: boolean) => {
-    const hasText = text.trim().length > 0;
-    const input = hasText
-      ? { messages: [{ type: 'human', content: text.trim() }] }
-      : {};
+    const trimmed = text.trim();
+    let input: Record<string, unknown> = {};
 
-    // Add human message to chat store so it shows in Chat tab
-    if (hasText) {
-      useChatStore.getState().addMessage({ role: 'human', content: text.trim() });
+    if (trimmed.length > 0) {
+      try {
+        input = JSON.parse(trimmed);
+        if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+          setJsonError('Input must be a JSON object {}');
+          return;
+        }
+        setJsonError(null);
+      } catch (e) {
+        setJsonError('Invalid JSON');
+        return;
+      }
+    }
+
+    // If input has messages, add to chat store
+    if (input.messages && Array.isArray(input.messages)) {
+      const lastMsg = input.messages[input.messages.length - 1];
+      if (lastMsg && typeof lastMsg === 'object') {
+        const content = (lastMsg as any).content || JSON.stringify(lastMsg);
+        useChatStore.getState().addMessage({ role: 'human', content: String(content) });
+      }
     }
 
     useExecutionStore.getState().setStepMode(step);
@@ -51,25 +71,29 @@ export function GraphToolbar() {
     });
 
     setShowInput(false);
-    setInputText('');
+    setJsonError(null);
   };
 
-  const handleRun = () => {
-    setPendingStepMode(false);
+  const openInputBar = (step: boolean) => {
+    setPendingStepMode(step);
+    setJsonError(null);
+    // Pre-fill with sample input if available and input is empty
+    if (!inputText && sampleInput) {
+      setInputText(JSON.stringify(sampleInput, null, 2));
+    }
     setShowInput(true);
   };
 
-  const handleStep = () => {
-    setPendingStepMode(true);
-    setShowInput(true);
-  };
+  const handleRun = () => openInputBar(false);
+  const handleStep = () => openInputBar(true);
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       executeRun(inputText, pendingStepMode);
     } else if (e.key === 'Escape') {
       setShowInput(false);
       setInputText('');
+      setJsonError(null);
     }
   };
 
@@ -271,33 +295,49 @@ export function GraphToolbar() {
         </div>
       </div>
 
-      {/* Inline input bar */}
+      {/* Inline JSON input bar */}
       {showInput && (
-        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-card/80">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            Input:
-          </span>
-          <input
-            ref={inputRef}
-            type="text"
-            className="flex-1 bg-input text-foreground text-xs px-2 py-1 rounded border border-border focus:outline-none focus:ring-1 focus:ring-node-active/50 placeholder:text-muted-foreground"
-            placeholder="Type a message or leave empty for no input..."
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={handleInputKeyDown}
-          />
-          <button
-            className="text-xs bg-node-success/20 text-node-success px-2 py-1 rounded hover:bg-node-success/30 transition-colors"
-            onClick={() => executeRun(inputText, pendingStepMode)}
-          >
-            {pendingStepMode ? '⏭ Go' : '▶ Go'}
-          </button>
-          <button
-            className="text-xs text-muted-foreground px-1.5 py-1 rounded hover:bg-muted transition-colors"
-            onClick={() => { setShowInput(false); setInputText(''); }}
-          >
-            ✕
-          </button>
+        <div className="flex flex-col border-b border-border bg-card/80">
+          <div className="flex items-start gap-2 px-3 py-1.5">
+            <span className="text-xs text-muted-foreground whitespace-nowrap mt-1">
+              JSON:
+            </span>
+            <div className="flex-1 flex flex-col gap-1">
+              <textarea
+                ref={inputRef}
+                className="w-full bg-input text-foreground text-xs px-2 py-1.5 rounded border border-border focus:outline-none focus:ring-1 focus:ring-node-active/50 placeholder:text-muted-foreground font-mono resize-y"
+                placeholder='{"key": "value"} or leave empty'
+                value={inputText}
+                onChange={(e) => { setInputText(e.target.value); setJsonError(null); }}
+                onKeyDown={handleInputKeyDown}
+                rows={Math.min(6, Math.max(2, inputText.split('\n').length))}
+                spellCheck={false}
+              />
+              {jsonError && (
+                <span className="text-[10px] text-node-error">{jsonError}</span>
+              )}
+              {inputSchema && Object.keys(inputSchema).length > 0 && (
+                <span className="text-[10px] text-muted-foreground">
+                  Schema: {Object.entries(inputSchema).map(([k, v]) => `${k} (${v})`).join(', ')}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1 mt-0.5">
+              <button
+                className="text-xs bg-node-success/20 text-node-success px-2 py-1 rounded hover:bg-node-success/30 transition-colors whitespace-nowrap"
+                onClick={() => executeRun(inputText, pendingStepMode)}
+                title="Ctrl+Enter to submit"
+              >
+                {pendingStepMode ? '⏭ Go' : '▶ Go'}
+              </button>
+              <button
+                className="text-xs text-muted-foreground px-1.5 py-1 rounded hover:bg-muted transition-colors"
+                onClick={() => { setShowInput(false); setInputText(''); setJsonError(null); }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

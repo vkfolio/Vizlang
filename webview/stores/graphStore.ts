@@ -32,13 +32,16 @@ interface GraphState {
   // Layout
   layoutDirection: 'TB' | 'LR';
   showDots: boolean;
+  // Schema
+  inputSchema: Record<string, string> | null;
+  sampleInput: Record<string, unknown> | null;
   // Loading
   isLoading: boolean;
   // Layout version — increment to force relayout
   layoutVersion: number;
 
   // Actions
-  setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
+  setGraphData: (nodes: GraphNode[], edges: GraphEdge[], inputSchema?: Record<string, string>, sampleInput?: Record<string, unknown>) => void;
   setAvailableGraphs: (graphs: GraphInfo[]) => void;
   setActiveGraph: (name: string) => void;
   setLayoutDirection: (dir: 'TB' | 'LR') => void;
@@ -98,16 +101,20 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   activeGraphName: null,
   layoutDirection: 'TB',
   showDots: true,
+  inputSchema: null,
+  sampleInput: null,
   isLoading: false,
   layoutVersion: 0,
 
-  setGraphData: (apiNodes, apiEdges) => {
+  setGraphData: (apiNodes, apiEdges, inputSchema, sampleInput) => {
     const { nodes, edges } = transformToReactFlow(apiNodes, apiEdges);
     set((s) => ({
       apiNodes,
       apiEdges,
       nodes,
       edges,
+      inputSchema: inputSchema || null,
+      sampleInput: sampleInput || null,
       isLoading: false,
       layoutVersion: s.layoutVersion + 1,
     }));

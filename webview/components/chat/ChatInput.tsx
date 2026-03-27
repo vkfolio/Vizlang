@@ -16,12 +16,24 @@ interface PendingAttachment {
 export function ChatInput() {
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+  const [extraFields, setExtraFields] = useState<Record<string, string>>({});
+  const [showExtra, setShowExtra] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const activeThreadId = useThreadStore((s) => s.activeThreadId);
   const hasGraph = useGraphStore((s) => s.nodes.length > 0);
   const addMessage = useChatStore((s) => s.addMessage);
+  const inputSchema = useGraphStore((s) => s.inputSchema);
+  const sampleInput = useGraphStore((s) => s.sampleInput);
+
+  // Non-message fields from schema
+  const extraFieldDefs = React.useMemo(() => {
+    if (!inputSchema) return [];
+    return Object.entries(inputSchema)
+      .filter(([key]) => key !== 'messages')
+      .map(([key, type]) => ({ key, type, sample: sampleInput?.[key] }));
+  }, [inputSchema, sampleInput]);
 
   const handleSubmit = useCallback(() => {
     const trimmed = text.trim();
@@ -39,11 +51,24 @@ export function ChatInput() {
     addMessage({ role: 'ai', content: '', thinking: 'Thinking...' });
     useExecutionStore.getState().setRunStatus('running');
 
+    // Build extra input fields (parse JSON values)
+    const extraInput: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(extraFields)) {
+      if (val.trim()) {
+        try {
+          extraInput[key] = JSON.parse(val);
+        } catch {
+          extraInput[key] = val; // Use as string if not valid JSON
+        }
+      }
+    }
+
     sendMessage({
       type: 'SEND_MESSAGE',
       threadId: activeThreadId,
       content: trimmed,
       attachments: messageAttachments.length > 0 ? messageAttachments : undefined,
+      extraInput: Object.keys(extraInput).length > 0 ? extraInput : undefined,
     });
 
     setText('');
@@ -135,6 +160,39 @@ export function ChatInput() {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Extra state fields (non-message schema fields) */}
+      {extraFieldDefs.length > 0 && (
+        <div className="mb-2">
+          <button
+            onClick={() => setShowExtra(!showExtra)}
+            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mb-1"
+          >
+            <span className="text-[10px]">{showExtra ? '▼' : '▶'}</span>
+            Extra fields ({extraFieldDefs.length})
+          </button>
+          {showExtra && (
+            <div className="space-y-1.5 p-2 bg-muted/20 rounded-lg border border-border/50">
+              {extraFieldDefs.map(({ key, type, sample }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <label className="text-[11px] text-muted-foreground w-20 text-right flex-shrink-0 font-mono">
+                    {key}
+                  </label>
+                  <input
+                    type="text"
+                    className="flex-1 bg-input text-foreground text-xs px-2 py-1 rounded border border-border focus:outline-none focus:ring-1 focus:ring-accent/30 font-mono placeholder:text-muted-foreground/40"
+                    placeholder={`${type} — e.g. ${JSON.stringify(sample ?? '')}`}
+                    value={extraFields[key] || ''}
+                    onChange={(e) =>
+                      setExtraFields((prev) => ({ ...prev, [key]: e.target.value }))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
