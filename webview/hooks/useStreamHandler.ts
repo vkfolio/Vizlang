@@ -210,9 +210,33 @@ export function useStreamHandler() {
           break;
         }
 
-        case 'THREAD_STATE':
+        case 'THREAD_STATE': {
           setCurrentState(msg.values);
+          // Rebuild chat messages from thread history if provided
+          const hist = (msg as any).history;
+          if (hist && Array.isArray(hist)) {
+            const rebuilt: Array<{ id: string; role: 'human' | 'ai'; content: string; timestamp: number }> = [];
+            for (const checkpoint of hist) {
+              const vals = checkpoint?.values as Record<string, unknown> | undefined;
+              if (vals && 'messages' in vals && Array.isArray(vals.messages)) {
+                for (const m of vals.messages as any[]) {
+                  if (m && typeof m === 'object') {
+                    const role = m.type === 'human' ? 'human' as const : 'ai' as const;
+                    const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+                    rebuilt.push({
+                      id: `hist_${rebuilt.length}`,
+                      role,
+                      content,
+                      timestamp: Date.now(),
+                    });
+                  }
+                }
+              }
+            }
+            useChatStore.getState().setMessages(rebuilt as any);
+          }
           break;
+        }
 
         case 'TRACE_UPDATE':
           // Full trace from host — could replace local spans

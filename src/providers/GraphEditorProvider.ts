@@ -187,6 +187,37 @@ export class GraphEditorProvider {
         }
         break;
 
+      case 'RELOAD_GRAPH':
+        if (this.currentFile) {
+          await this.loadGraph(this.currentFile, this.currentGraphVar);
+        }
+        break;
+
+      case 'CLOSE_FILE':
+        this.currentFile = undefined;
+        this.currentGraphVar = undefined;
+        this.messageBus?.send({
+          type: 'GRAPH_DATA',
+          nodes: [],
+          edges: [],
+        });
+        break;
+
+      case 'OPEN_FILE_PICKER': {
+        const fileUri = await vscode.window.showOpenDialog({
+          canSelectFiles: true,
+          canSelectFolders: false,
+          canSelectMany: false,
+          filters: { 'Python Files': ['py'] },
+          title: 'Select a Python file containing a LangGraph',
+        });
+        if (fileUri && fileUri.length > 0) {
+          this.currentFile = fileUri[0].fsPath;
+          await this.loadGraph(fileUri[0].fsPath);
+        }
+        break;
+      }
+
       case 'GET_STATE':
         await this.handleGetState(msg.threadId);
         break;

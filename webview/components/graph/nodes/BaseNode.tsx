@@ -61,7 +61,7 @@ export function BaseNode({
         type="target"
         position={isHorizontal ? Position.Left : Position.Top}
         style={isHorizontal ? { top: '50%' } : { left: '50%' }}
-        className="!bg-muted-foreground/60 !border-none !w-2 !h-2 hover:!bg-foreground hover:!w-2.5 hover:!h-2.5 !transition-all"
+        className="!bg-muted-foreground !border-none !w-2 !h-2 hover:!bg-foreground hover:!w-2.5 hover:!h-2.5 !transition-all"
       />
 
       <div className="flex items-center gap-2 px-4 py-2.5">
@@ -94,7 +94,7 @@ export function BaseNode({
         type="source"
         position={isHorizontal ? Position.Right : Position.Bottom}
         style={isHorizontal ? { top: '50%' } : { left: '50%' }}
-        className="!bg-muted-foreground/60 !border-none !w-2 !h-2 hover:!bg-foreground hover:!w-2.5 hover:!h-2.5 !transition-all"
+        className="!bg-muted-foreground !border-none !w-2 !h-2 hover:!bg-foreground hover:!w-2.5 hover:!h-2.5 !transition-all"
       />
     </div>
   );

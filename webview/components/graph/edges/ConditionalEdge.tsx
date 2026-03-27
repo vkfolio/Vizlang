@@ -52,7 +52,7 @@ export function ConditionalEdge({
         path={edgePath}
         style={{
           stroke: '#a855f7',
-          opacity: 0.5,
+          opacity: 0.7,
           strokeWidth: 1.5,
           strokeDasharray: '6 4',
           ...style,

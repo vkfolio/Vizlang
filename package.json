@@ -23,7 +23,8 @@
   ],
   "activationEvents": [
     "onCommand:vizlang.loadGraph",
-    "onView:vizlang.threads"
+    "onCommand:vizlang.openCurrentFile",
+    "onLanguage:python"
   ],
   "main": "./dist/extension/extension.js",
   "contributes": {
@@ -32,6 +33,18 @@
         "command": "vizlang.loadGraph",
         "title": "VizLang: Load Graph",
         "icon": "$(graph)"
+      },
+      {
+        "command": "vizlang.openCurrentFile",
+        "title": "VizLang: Open in VizLang",
+        "icon": {
+          "light": "media/logo.svg",
+          "dark": "media/logo.svg"
+        }
+      },
+      {
+        "command": "vizlang.openFile",
+        "title": "VizLang: Open File"
       },
       {
         "command": "vizlang.runGraph",
@@ -54,31 +67,19 @@
         "icon": "$(add)"
       }
     ],
-    "viewsContainers": {
-      "activitybar": [
+    "menus": {
+      "editor/title": [
         {
-          "id": "vizlang",
-          "title": "VizLang",
-          "icon": "media/logo.svg"
+          "command": "vizlang.openCurrentFile",
+          "when": "resourceLangId == python",
+          "group": "navigation"
         }
-      ]
-    },
-    "views": {
-      "vizlang": [
+      ],
+      "explorer/context": [
         {
-          "type": "webview",
-          "id": "vizlang.threads",
-          "name": "Threads"
-        },
-        {
-          "type": "webview",
-          "id": "vizlang.trace",
-          "name": "Trace"
-        },
-        {
-          "type": "webview",
-          "id": "vizlang.stateInspector",
-          "name": "State Inspector"
+          "command": "vizlang.openFile",
+          "when": "resourceLangId == python",
+          "group": "navigation"
         }
       ]
     },

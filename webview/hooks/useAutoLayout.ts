@@ -14,6 +14,7 @@ export function useAutoLayout() {
   const nodes = useGraphStore((s) => s.nodes);
   const edges = useGraphStore((s) => s.edges);
   const setNodes = useGraphStore((s) => s.setNodes);
+  const layoutVersion = useGraphStore((s) => s.layoutVersion);
 
   useEffect(() => {
     if (nodes.length === 0) return;
@@ -55,5 +56,5 @@ export function useAutoLayout() {
     });
 
     setNodes(layoutedNodes);
-  }, [nodes.length, edges.length]);
+  }, [nodes.length, edges.length, layoutVersion]);
 }

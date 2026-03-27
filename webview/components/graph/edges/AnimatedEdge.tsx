@@ -50,8 +50,7 @@ export function AnimatedEdge({
       id={id}
       path={edgePath}
       style={{
-        stroke: 'var(--muted-foreground)',
-        opacity: 0.4,
+        stroke: 'var(--border)',
         strokeWidth: 1.5,
         ...style,
       }}

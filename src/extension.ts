@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { BridgeManager } from './bridge/BridgeManager';
 import { GraphEditorProvider } from './providers/GraphEditorProvider';
-import { registerLoadGraphCommand } from './commands/loadGraph';
 
 let bridge: BridgeManager;
 let graphEditor: GraphEditorProvider;
@@ -15,37 +14,60 @@ export function activate(context: vscode.ExtensionContext) {
   graphEditor = new GraphEditorProvider(bridge, context.extensionUri);
   context.subscriptions.push(graphEditor);
 
-  // Register commands
-  context.subscriptions.push(registerLoadGraphCommand(graphEditor));
+  // Command: Load Graph (file picker)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vizlang.loadGraph', async () => {
+      const fileUri = await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        filters: { 'Python Files': ['py'] },
+        title: 'Select a Python file containing a LangGraph',
+      });
 
-  // Status bar item
-  const statusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Left,
-    100
+      if (!fileUri || fileUri.length === 0) return;
+      await graphEditor.openGraph(fileUri[0].fsPath);
+    })
   );
-  statusBarItem.text = '$(circuit-board) VizLang';
-  statusBarItem.command = 'vizlang.loadGraph';
-  statusBarItem.tooltip = 'Load a LangGraph';
-  statusBarItem.show();
-  context.subscriptions.push(statusBarItem);
 
-  // Update status bar on bridge status changes
-  bridge.onStatusChange((status) => {
-    switch (status) {
-      case 'starting':
-        statusBarItem.text = '$(loading~spin) VizLang: Starting...';
-        break;
-      case 'ready':
-        statusBarItem.text = '$(check) VizLang: Connected';
-        break;
-      case 'error':
-        statusBarItem.text = '$(error) VizLang: Error';
-        break;
-      case 'stopped':
-        statusBarItem.text = '$(circuit-board) VizLang';
-        break;
-    }
-  });
+  // Command: Open current Python file in VizLang (editor/title button)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vizlang.openCurrentFile', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showWarningMessage('VizLang: No active editor.');
+        return;
+      }
+
+      const filePath = editor.document.uri.fsPath;
+      if (!filePath.endsWith('.py')) {
+        vscode.window.showWarningMessage(
+          'VizLang: Only Python files are supported.'
+        );
+        return;
+      }
+
+      await graphEditor.openGraph(filePath);
+    })
+  );
+
+  // Command: Open a file by URI (for drag-and-drop / URI handler)
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'vizlang.openFile',
+      async (uri?: vscode.Uri) => {
+        if (!uri) return;
+        const filePath = uri.fsPath;
+        if (!filePath.endsWith('.py')) {
+          vscode.window.showWarningMessage(
+            'VizLang: Only Python (.py) files are supported.'
+          );
+          return;
+        }
+        await graphEditor.openGraph(filePath);
+      }
+    )
+  );
 
   console.log('VizLang extension activated');
 }

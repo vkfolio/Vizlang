@@ -24,6 +24,8 @@ interface GraphState {
   showDots: boolean;
   // Loading
   isLoading: boolean;
+  // Layout version — increment to force relayout
+  layoutVersion: number;
 
   // Actions
   setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
@@ -31,6 +33,7 @@ interface GraphState {
   setActiveGraph: (name: string) => void;
   setLayoutDirection: (dir: 'TB' | 'LR') => void;
   setShowDots: (show: boolean) => void;
+  relayout: () => void;
   setNodeStatus: (nodeId: string, status: GraphNodeData['status']) => void;
   resetNodeStatuses: () => void;
   setNodes: (nodes: Node<GraphNodeData>[]) => void;
@@ -80,16 +83,18 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   layoutDirection: 'TB',
   showDots: true,
   isLoading: false,
+  layoutVersion: 0,
 
   setGraphData: (apiNodes, apiEdges) => {
     const { nodes, edges } = transformToReactFlow(apiNodes, apiEdges);
-    set({
+    set((s) => ({
       apiNodes,
       apiEdges,
       nodes,
       edges,
       isLoading: false,
-    });
+      layoutVersion: s.layoutVersion + 1,
+    }));
   },
 
   setAvailableGraphs: (graphs) => set({ availableGraphs: graphs }),
@@ -99,6 +104,8 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   setLayoutDirection: (dir) => set({ layoutDirection: dir }),
 
   setShowDots: (show) => set({ showDots: show }),
+
+  relayout: () => set((s) => ({ layoutVersion: s.layoutVersion + 1 })),
 
   setNodeStatus: (nodeId, status) => {
     const nodes = get().nodes.map((n) =>

@@ -23,6 +23,7 @@ import { AnimatedEdge } from './edges/AnimatedEdge';
 import { ConditionalEdge } from './edges/ConditionalEdge';
 import { NodeStateTooltip } from './NodeStateTooltip';
 import { GraphToolbar } from './GraphToolbar';
+import { sendMessage } from '@/bridge/MessageBus';
 
 const nodeTypes = {
   entry: EntryNode,
@@ -130,23 +131,48 @@ function GraphCanvasInner() {
       <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <GraphToolbar />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <div className="flex flex-col items-center gap-4 text-muted-foreground max-w-sm text-center">
             <svg
-              width="48"
-              height="48"
+              width="56"
+              height="56"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.5"
-              className="opacity-40"
+              strokeWidth="1"
+              className="opacity-30"
             >
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
+              <circle cx="6" cy="6" r="2.5" />
+              <circle cx="18" cy="6" r="2.5" />
+              <circle cx="12" cy="18" r="2.5" />
+              <path d="M8.5 6h7M6.7 8.4l4.6 7.7M17.3 8.4l-4.6 7.7" />
             </svg>
-            <span className="text-sm">No graph loaded</span>
-            <span className="text-xs">
-              Use <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Ctrl+Shift+P</kbd> → "VizLang: Load Graph"
-            </span>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground/70">No graph loaded</p>
+              <p className="text-xs leading-relaxed">
+                Open a Python file with a LangGraph and click the
+                <span className="inline-flex items-center mx-1 px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">VizLang</span>
+                button in the editor title bar.
+              </p>
+            </div>
+
+            {/* Browse button */}
+            <button
+              onClick={() => sendMessage({ type: 'OPEN_FILE_PICKER' })}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M2 5.5V3a1 1 0 011-1h3l1.5 1.5H11a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V8" />
+                <path d="M5 7.5h4M7 5.5v4" />
+              </svg>
+              Open Python File
+            </button>
+
+            <div className="text-xs space-y-1.5 text-muted-foreground/70">
+              <p>Or right-click a <code className="px-1 py-0.5 bg-muted rounded text-[10px]">.py</code> file → "Open in VizLang"</p>
+              <p>
+                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Ctrl+Shift+P</kbd> → "VizLang: Load Graph"
+              </p>
+            </div>
           </div>
         </div>
       </div>

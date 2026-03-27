@@ -155,5 +155,9 @@ export type WebviewMessage =
       asNode?: string;
     }
   | { type: 'TIME_TRAVEL'; threadId: string; checkpointId: string }
+  // File picker
+  | { type: 'OPEN_FILE_PICKER' }
+  | { type: 'RELOAD_GRAPH' }
+  | { type: 'CLOSE_FILE' }
   // Navigation
   | { type: 'HIGHLIGHT_NODE'; nodeId: string };

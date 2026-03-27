@@ -5,7 +5,7 @@
   --xy-node-background-color: var(--card);
   --xy-node-border-color: var(--border);
   --xy-node-color: var(--foreground);
-  --xy-edge-stroke: var(--muted-foreground);
+  --xy-edge-stroke: var(--border);
   --xy-minimap-background-color: var(--card);
   --xy-controls-button-background-color: var(--card);
   --xy-controls-button-color: var(--muted-foreground);
