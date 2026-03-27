@@ -125,6 +125,8 @@ export type HostMessage =
 // ═══════════════════════════════════════════════════════════════
 
 export type WebviewMessage =
+  // Lifecycle
+  | { type: 'WEBVIEW_READY' }
   // Graph
   | { type: 'LOAD_GRAPH'; filePath: string; graphVar?: string }
   | { type: 'REQUEST_GRAPHS'; filePath: string }

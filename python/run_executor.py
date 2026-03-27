@@ -50,7 +50,7 @@ class RunExecutor:
     ) -> None:
         """Common streaming logic for execute and resume."""
         import sys
-        print(f"[run_executor] _run_stream called — input: {input_data}, step_mode: {step_mode}", file=sys.stderr)
+        print(f"[run_executor] _run_stream called — input_type: {type(input_data).__name__}, step_mode: {step_mode}", file=sys.stderr)
         try:
             # If no input provided, check if graph has existing state to resume
             if input_data is None:
@@ -81,16 +81,20 @@ class RunExecutor:
                 if node_names:
                     stream_kwargs["interrupt_after"] = node_names
 
+            print(f"[run_executor] Starting graph.stream()...", file=sys.stderr)
             stream = self.graph.stream(
                 input_data,
                 config,
                 **stream_kwargs,
             )
 
+            event_count = 0
             for event in stream:
                 if self._cancelled.is_set():
+                    print(f"[run_executor] Cancelled after {event_count} events", file=sys.stderr)
                     break
 
+                event_count += 1
                 # Handle multi-mode streaming (returns tuples)
                 if len(stream_modes) > 1 and isinstance(event, tuple):
                     mode, data = event
@@ -101,14 +105,18 @@ class RunExecutor:
                 serialized = serialize_value(data)
                 self.send_stream(req_id, mode, serialized)
 
+            print(f"[run_executor] Stream finished with {event_count} events", file=sys.stderr)
+
             # Check if interrupted (state has pending tasks)
             self._check_for_interrupts(req_id, config)
 
         except Exception as e:
-            import traceback
+            import traceback as tb
+            print(f"[run_executor] ERROR: {e}", file=sys.stderr)
+            tb.print_exc(file=sys.stderr)
             self.send_stream(req_id, "error", {
                 "message": str(e),
-                "traceback": traceback.format_exc(),
+                "traceback": tb.format_exc(),
             })
             self.send_done(req_id)
 

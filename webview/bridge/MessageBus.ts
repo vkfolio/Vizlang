@@ -15,6 +15,9 @@ window.addEventListener('message', (event) => {
   }
 });
 
+// Notify host that webview is ready
+vscode.postMessage({ type: 'WEBVIEW_READY' });
+
 /**
  * Send a message to the extension host.
  */

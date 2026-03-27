@@ -5,6 +5,7 @@ import {
   type EdgeProps,
 } from '@xyflow/react';
 import { useExecutionStore } from '@/stores/executionStore';
+import { computeEdgePath } from './AnimatedEdge';
 
 export function ConditionalEdge({
   id,
@@ -12,37 +13,19 @@ export function ConditionalEdge({
   sourceY,
   targetX,
   targetY,
-  sourcePosition,
-  targetPosition,
   label,
   style,
 }: EdgeProps) {
   const runStatus = useExecutionStore((s) => s.runStatus);
   const isRunning = runStatus === 'running';
 
-  const dx = Math.abs(sourceX - targetX);
-  const dy = Math.abs(sourceY - targetY);
-  const isVertical = dy > dx;
+  const edgePath = computeEdgePath(sourceX, sourceY, targetX, targetY);
 
-  let edgePath: string;
-
-  if (isVertical) {
-    if (dx < 2) {
-      edgePath = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
-    } else {
-      const midY = (sourceY + targetY) / 2;
-      edgePath = `M ${sourceX} ${sourceY} C ${sourceX} ${midY} ${targetX} ${midY} ${targetX} ${targetY}`;
-    }
-  } else {
-    if (dy < 2) {
-      edgePath = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
-    } else {
-      const midX = (sourceX + targetX) / 2;
-      edgePath = `M ${sourceX} ${sourceY} C ${midX} ${sourceY} ${midX} ${targetY} ${targetX} ${targetY}`;
-    }
-  }
-
-  const labelX = (sourceX + targetX) / 2;
+  // Position label correctly for both forward and back-edges
+  const isBackEdge = targetY < sourceY - 20;
+  const labelX = isBackEdge
+    ? Math.min(sourceX, targetX) - 50 // on the left loop segment
+    : (sourceX + targetX) / 2;
   const labelY = (sourceY + targetY) / 2;
 
   return (

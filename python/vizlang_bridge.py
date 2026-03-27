@@ -17,7 +17,9 @@ from state_manager import StateManager
 from utils import serialize
 
 def convert_input_messages(input_data: Any) -> Any:
-    """Convert message dicts with 'role' key to LangChain message objects."""
+    """Convert message dicts with 'role'/'type' key to LangChain message objects.
+    Handles multimodal content (images, audio) by converting to LangChain's content array format.
+    """
     if not isinstance(input_data, dict):
         return input_data
     if "messages" not in input_data:
@@ -35,6 +37,41 @@ def convert_input_messages(input_data: Any) -> Any:
             continue
         role = m.get("role") or m.get("type") or ""
         content = m.get("content", "")
+
+        # Handle multimodal content (list of content parts)
+        if isinstance(content, list):
+            lc_parts = []
+            for part in content:
+                if not isinstance(part, dict):
+                    lc_parts.append(part)
+                    continue
+                ptype = part.get("type", "")
+                if ptype == "text":
+                    lc_parts.append({"type": "text", "text": part.get("text", "")})
+                elif ptype == "image":
+                    # Convert to LangChain image format
+                    base64_data = part.get("base64", "")
+                    mime_type = part.get("mime_type", "image/png")
+                    lc_parts.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{mime_type};base64,{base64_data}",
+                        },
+                    })
+                elif ptype == "audio":
+                    base64_data = part.get("base64", "")
+                    mime_type = part.get("mime_type", "audio/wav")
+                    lc_parts.append({
+                        "type": "input_audio",
+                        "input_audio": {
+                            "data": base64_data,
+                            "format": mime_type.split("/")[-1],
+                        },
+                    })
+                else:
+                    lc_parts.append(part)
+            content = lc_parts
+
         if role in ("human", "user"):
             converted.append(HumanMessage(content=content))
         elif role in ("ai", "assistant"):

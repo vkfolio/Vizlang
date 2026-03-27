@@ -8,7 +8,7 @@ const NODE_HEIGHT = 44;
 
 /**
  * Computes node positions using dagre auto-layout.
- * Always uses horizontal (LR) layout direction.
+ * Uses TB (top-to-bottom) direction with center alignment.
  */
 export function useAutoLayout() {
   const nodes = useGraphStore((s) => s.nodes);
@@ -23,12 +23,13 @@ export function useAutoLayout() {
     g.setDefaultEdgeLabel(() => ({}));
     g.setGraph({
       rankdir: 'TB',
-      nodesep: 40,
-      ranksep: 50,
-      marginx: 20,
-      marginy: 20,
+      nodesep: 60,
+      ranksep: 80,
+      marginx: 30,
+      marginy: 30,
     });
 
+    // Use uniform width for all nodes — must match rendered width
     for (const node of nodes) {
       g.setNode(node.id, {
         width: NODE_WIDTH,
@@ -36,12 +37,41 @@ export function useAutoLayout() {
       });
     }
 
+    // Detect back-edges via DFS and reverse them for dagre
+    const visited = new Set<string>();
+    const backEdgeIds = new Set<string>();
+
+    function dfs(nodeId: string) {
+      if (visited.has(nodeId)) return;
+      visited.add(nodeId);
+      for (const edge of edges) {
+        if (edge.source === nodeId) {
+          if (visited.has(edge.target)) {
+            backEdgeIds.add(edge.id);
+          } else {
+            dfs(edge.target);
+          }
+        }
+      }
+    }
+
+    const startNode = nodes.find((n) => n.id === '__start__') || nodes[0];
+    if (startNode) dfs(startNode.id);
+    for (const node of nodes) {
+      if (!visited.has(node.id)) dfs(node.id);
+    }
+
     for (const edge of edges) {
-      g.setEdge(edge.source, edge.target);
+      if (backEdgeIds.has(edge.id)) {
+        g.setEdge(edge.target, edge.source);
+      } else {
+        g.setEdge(edge.source, edge.target);
+      }
     }
 
     dagre.layout(g);
 
+    // Snap positions to integers to avoid sub-pixel float drift
     const layoutedNodes = nodes.map((node) => {
       const dagreNode = g.node(node.id);
       if (!dagreNode) return node;
@@ -49,8 +79,8 @@ export function useAutoLayout() {
       return {
         ...node,
         position: {
-          x: dagreNode.x - NODE_WIDTH / 2,
-          y: dagreNode.y - NODE_HEIGHT / 2,
+          x: Math.round(dagreNode.x - NODE_WIDTH / 2),
+          y: Math.round(dagreNode.y - NODE_HEIGHT / 2),
         },
       };
     });

@@ -1,6 +1,9 @@
 import React from 'react';
 import { useThreadStore } from '@/stores/threadStore';
 import { useChatStore } from '@/stores/chatStore';
+import { useTraceStore } from '@/stores/traceStore';
+import { useExecutionStore } from '@/stores/executionStore';
+import { useGraphStore } from '@/stores/graphStore';
 import { sendMessage } from '@/bridge/MessageBus';
 import { cn } from '@/lib/utils';
 
@@ -20,12 +23,19 @@ export function ThreadsPanel() {
     sendMessage({ type: 'SWITCH_THREAD', threadId });
   };
 
+  const clearRunState = () => {
+    useTraceStore.getState().clear();
+    useExecutionStore.getState().reset();
+    useGraphStore.getState().resetNodeStatuses();
+  };
+
   const handleDelete = (threadId: string) => {
     sendMessage({ type: 'DELETE_THREAD', threadId });
     useThreadStore.getState().removeThread(threadId);
     useChatStore.getState().clearThread(threadId);
-    // If we deleted the active thread, switch to default
+    // If we deleted the active thread, switch to default and clear traces
     if (activeThreadId === threadId) {
+      clearRunState();
       useChatStore.getState().switchThread(threadId, 'default');
       useThreadStore.getState().setActiveThread('default');
       sendMessage({ type: 'SWITCH_THREAD', threadId: 'default' });
@@ -35,6 +45,7 @@ export function ThreadsPanel() {
   const handleClearDefault = () => {
     useChatStore.getState().clear();
     useChatStore.getState().clearThread('default');
+    clearRunState();
   };
 
   return (
