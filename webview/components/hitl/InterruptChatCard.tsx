@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { sendMessage } from '@/bridge/MessageBus';
+import { useExecutionStore } from '@/stores/executionStore';
 import type { InterruptData } from '../../../shared/protocol';
 
 interface Props {
@@ -16,7 +17,8 @@ export function InterruptChatCard({ interrupt }: Props) {
 
   const handleSubmit = (val: unknown) => {
     setSubmitted(true);
-    sendMessage({ type: 'RESOLVE_INTERRUPT', response: val });
+    const stepMode = useExecutionStore.getState().stepMode;
+    sendMessage({ type: 'RESOLVE_INTERRUPT', response: val, stepMode });
   };
 
   if (submitted) {

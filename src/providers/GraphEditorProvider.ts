@@ -382,8 +382,13 @@ export class GraphEditorProvider {
 
   private async handleResolveInterrupt(msg: {
     response: unknown;
+    stepMode?: boolean;
+    threadId?: string;
   }): Promise<void> {
     if (!this.currentFile) return;
+
+    const stepMode = msg.stepMode ?? false;
+    const threadId = msg.threadId || 'default';
 
     const streamDisposable = this.bridge.onStream((response) => {
       this.messageBus?.send({
@@ -407,19 +412,30 @@ export class GraphEditorProvider {
       });
     });
 
+    const stepPauseDisposable = this.bridge.onStepPause((response) => {
+      const data = response.data as any;
+      this.messageBus?.send({
+        type: 'STEP_PAUSED',
+        nodeId: data.completed_node || '',
+        nextNodes: data.next_nodes || [],
+      });
+    });
+
     const doneDisposable = this.bridge.onDone(() => {
       this.messageBus?.send({ type: 'RUN_COMPLETE', finalState: null });
       streamDisposable.dispose();
       interruptDisposable.dispose();
+      stepPauseDisposable.dispose();
       doneDisposable.dispose();
     });
 
     this.messageBus?.send({ type: 'INTERRUPT_RESUMED' });
 
     this.bridge.sendRequest('resume', {
-      thread_id: '', // Will use current thread
+      thread_id: threadId,
       value: msg.response,
       stream_mode: ['values', 'updates'],
+      step_mode: stepMode,
     });
   }
 

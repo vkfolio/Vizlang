@@ -138,7 +138,7 @@ export type WebviewMessage =
   | { type: 'RESUME_RUN'; threadId: string; stepMode?: boolean }
   | { type: 'CANCEL_RUN' }
   // HITL
-  | { type: 'RESOLVE_INTERRUPT'; response: unknown }
+  | { type: 'RESOLVE_INTERRUPT'; response: unknown; stepMode?: boolean; threadId?: string }
   // Chat
   | { type: 'SEND_MESSAGE'; threadId: string; content: string; attachments?: Attachment[] }
   // Threads

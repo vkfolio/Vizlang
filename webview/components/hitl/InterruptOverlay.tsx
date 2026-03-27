@@ -13,7 +13,8 @@ export function InterruptOverlay() {
   const options = value?.options as string[] | undefined;
 
   const handleSubmit = (val: unknown) => {
-    sendMessage({ type: 'RESOLVE_INTERRUPT', response: val });
+    const stepMode = useExecutionStore.getState().stepMode;
+    sendMessage({ type: 'RESOLVE_INTERRUPT', response: val, stepMode });
   };
 
   return (
