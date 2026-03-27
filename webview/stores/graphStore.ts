@@ -2,6 +2,16 @@ import { create } from 'zustand';
 import type { Node, Edge } from '@xyflow/react';
 import type { GraphNode, GraphEdge, GraphInfo } from '../../shared/protocol';
 
+export interface Waypoint {
+  id: string;
+  x: number;
+  y: number;
+}
+
+export interface EdgeData extends Record<string, unknown> {
+  waypoints?: Waypoint[];
+}
+
 export interface GraphNodeData extends Record<string, unknown> {
   label: string;
   nodeType: GraphNode['type'];
@@ -39,6 +49,11 @@ interface GraphState {
   setNodes: (nodes: Node<GraphNodeData>[]) => void;
   setEdges: (edges: Edge[]) => void;
   setLoading: (loading: boolean) => void;
+  // Edge waypoints
+  updateEdgeWaypoints: (edgeId: string, waypoints: Waypoint[]) => void;
+  // Export
+  exportPng: (() => void) | null;
+  setExportPng: (fn: (() => void) | null) => void;
 }
 
 /**
@@ -68,6 +83,7 @@ function transformToReactFlow(
     type: e.conditional ? 'conditional' : 'animated',
     label: e.data || undefined,
     animated: false,
+    data: { waypoints: [] } as EdgeData,
   }));
 
   return { nodes, edges };
@@ -105,7 +121,14 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
   setShowDots: (show) => set({ showDots: show }),
 
-  relayout: () => set((s) => ({ layoutVersion: s.layoutVersion + 1 })),
+  relayout: () => {
+    // Clear all waypoints on relayout since they use absolute coordinates
+    const edges = get().edges.map((e) => ({
+      ...e,
+      data: { ...e.data, waypoints: [] },
+    }));
+    set((s) => ({ edges, layoutVersion: s.layoutVersion + 1 }));
+  },
 
   setNodeStatus: (nodeId, status) => {
     const nodes = get().nodes.map((n) =>
@@ -125,4 +148,13 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
   setLoading: (loading) => set({ isLoading: loading }),
+
+  updateEdgeWaypoints: (edgeId, waypoints) => {
+    const edges = get().edges.map((e) =>
+      e.id === edgeId ? { ...e, data: { ...e.data, waypoints } } : e
+    );
+    set({ edges });
+  },
+  exportPng: null,
+  setExportPng: (fn) => set({ exportPng: fn }),
 }));

@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -9,10 +9,14 @@ import {
   useReactFlow,
   type NodeChange,
   type EdgeChange,
+  type Edge,
   applyNodeChanges,
   applyEdgeChanges,
+  getNodesBounds,
+  getViewportForBounds,
 } from '@xyflow/react';
-import { useGraphStore } from '@/stores/graphStore';
+import { toPng } from 'html-to-image';
+import { useGraphStore, type Waypoint, type EdgeData } from '@/stores/graphStore';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useAutoLayout } from '@/hooks/useAutoLayout';
 import { EntryNode } from './nodes/EntryNode';
@@ -37,6 +41,22 @@ const edgeTypes = {
   conditional: ConditionalEdge,
 };
 
+/** Distance from point (px, py) to line segment (a, b) */
+function pointToSegmentDist(
+  px: number,
+  py: number,
+  a: { x: number; y: number },
+  b: { x: number; y: number }
+): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - a.x, py - a.y);
+  let t = ((px - a.x) * dx + (py - a.y) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (a.x + t * dx), py - (a.y + t * dy));
+}
+
 function GraphCanvasInner() {
   const nodes = useGraphStore((s) => s.nodes);
   const edges = useGraphStore((s) => s.edges);
@@ -50,6 +70,65 @@ function GraphCanvasInner() {
   const [tooltipAnchor, setTooltipAnchor] = useState<{ x: number; y: number } | null>(null);
   const isOverTooltipRef = useRef(false);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { getNodes, screenToFlowPosition } = useReactFlow();
+
+  // Register PNG export function in store
+  useEffect(() => {
+    const exportFn = () => {
+      const allNodes = getNodes();
+      if (allNodes.length === 0) return;
+
+      const nodesBounds = getNodesBounds(allNodes);
+      const pad = 20;
+      const imgWidth = nodesBounds.width + pad * 2;
+      const imgHeight = nodesBounds.height + pad * 2;
+      const scale = 3;
+
+      const flowEl = document.querySelector('.react-flow__viewport') as HTMLElement;
+      if (!flowEl) return;
+
+      // Compute transform: shift so graph top-left is at (pad, pad), scale 1:1
+      const tx = -nodesBounds.x + pad;
+      const ty = -nodesBounds.y + pad;
+
+      toPng(flowEl, {
+        backgroundColor: getComputedStyle(document.body).getPropertyValue('background-color') || '#1e1e1e',
+        width: imgWidth * scale,
+        height: imgHeight * scale,
+        pixelRatio: 1, // we handle scaling via canvas size
+        filter: (node) => {
+          // Exclude minimap, controls, background dots from export
+          if (node.classList) {
+            if (
+              node.classList.contains('react-flow__minimap') ||
+              node.classList.contains('react-flow__controls') ||
+              node.classList.contains('react-flow__background') ||
+              node.classList.contains('react-flow__panel')
+            ) {
+              return false;
+            }
+          }
+          return true;
+        },
+        style: {
+          width: `${imgWidth * scale}px`,
+          height: `${imgHeight * scale}px`,
+          transform: `translate(${tx * scale}px, ${ty * scale}px) scale(${scale})`,
+        },
+      }).then((dataUrl) => {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `graph-${Date.now()}.png`;
+        a.click();
+      }).catch((err) => {
+        console.error('Failed to export PNG:', err);
+      });
+    };
+
+    useGraphStore.getState().setExportPng(exportFn);
+    return () => useGraphStore.getState().setExportPng(null);
+  }, [getNodes]);
 
   // Compute auto-layout
   useAutoLayout();
@@ -69,6 +148,55 @@ function GraphCanvasInner() {
       setEdges(updated as typeof edges);
     },
     [edges, setEdges]
+  );
+
+  // Double-click edge to add a waypoint
+  const onEdgeDoubleClick = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      const flowPos = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      const edgeData = (edge.data as EdgeData) || {};
+      const existing = edgeData.waypoints || [];
+
+      // Find insertion index: closest segment
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      const targetNode = nodes.find((n) => n.id === edge.target);
+      if (!sourceNode || !targetNode) return;
+
+      // Build points list: source center → existing waypoints → target center
+      const srcX = sourceNode.position.x + (sourceNode.measured?.width ?? 160) / 2;
+      const srcY = sourceNode.position.y + (sourceNode.measured?.height ?? 40) / 2;
+      const tgtX = targetNode.position.x + (targetNode.measured?.width ?? 160) / 2;
+      const tgtY = targetNode.position.y + (targetNode.measured?.height ?? 40) / 2;
+
+      const points = [
+        { x: srcX, y: srcY },
+        ...existing,
+        { x: tgtX, y: tgtY },
+      ];
+
+      // Find closest segment
+      let bestIdx = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < points.length - 1; i++) {
+        const d = pointToSegmentDist(flowPos.x, flowPos.y, points[i], points[i + 1]);
+        if (d < bestDist) {
+          bestDist = d;
+          bestIdx = i;
+        }
+      }
+
+      const newWp: Waypoint = {
+        id: crypto.randomUUID(),
+        x: flowPos.x,
+        y: flowPos.y,
+      };
+
+      const updated = [...existing];
+      // Insert after bestIdx (which is the segment index; waypoints start at index 0 = after source)
+      updated.splice(bestIdx, 0, newWp);
+      useGraphStore.getState().updateEdgeWaypoints(edge.id, updated);
+    },
+    [nodes, screenToFlowPosition]
   );
 
   const clearHideTimeout = () => {
@@ -189,12 +317,15 @@ function GraphCanvasInner() {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onEdgeDoubleClick={onEdgeDoubleClick}
             onNodeMouseEnter={onNodeMouseEnter}
             onNodeMouseLeave={onNodeMouseLeave}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             nodesDraggable={true}
             nodesConnectable={false}
+            edgesFocusable={true}
+            elementsSelectable={true}
             fitView
             fitViewOptions={{ padding: 0.3 }}
             minZoom={0.1}

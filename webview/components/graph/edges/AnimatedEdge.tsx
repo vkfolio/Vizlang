@@ -4,6 +4,8 @@ import {
   type EdgeProps,
 } from '@xyflow/react';
 import { useExecutionStore } from '@/stores/executionStore';
+import type { Waypoint, EdgeData } from '@/stores/graphStore';
+import { WaypointOverlay } from './WaypointOverlay';
 
 export function AnimatedEdge({
   id,
@@ -11,90 +13,156 @@ export function AnimatedEdge({
   sourceY,
   targetX,
   targetY,
+  data,
   style,
+  selected,
 }: EdgeProps) {
   const runStatus = useExecutionStore((s) => s.runStatus);
   const isRunning = runStatus === 'running';
+  const waypoints = (data as EdgeData)?.waypoints;
 
-  const edgePath = computeEdgePath(sourceX, sourceY, targetX, targetY);
+  const edgePath = computeEdgePath(sourceX, sourceY, targetX, targetY, waypoints);
 
   return (
-    <BaseEdge
-      id={id}
-      path={edgePath}
-      style={{
-        stroke: 'var(--border)',
-        strokeWidth: 1.5,
-        ...style,
-      }}
-      className={isRunning ? 'animated' : ''}
-    />
+    <>
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        style={{
+          stroke: 'var(--border)',
+          strokeWidth: 1.5,
+          ...style,
+        }}
+        className={isRunning ? 'animated' : ''}
+      />
+      <WaypointOverlay
+        edgeId={id}
+        waypoints={waypoints || []}
+        sourceX={sourceX}
+        sourceY={sourceY}
+        targetX={targetX}
+        targetY={targetY}
+        selected={selected}
+      />
+    </>
   );
 }
 
 /**
+ * Build a smooth path through waypoints using rounded corners.
+ */
+function buildWaypointPath(points: { x: number; y: number }[]): string {
+  if (points.length < 2) return '';
+  if (points.length === 2) {
+    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+  }
+
+  const r = 8; // corner radius
+  const segments: string[] = [`M ${points[0].x} ${points[0].y}`];
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const next = points[i + 1];
+
+    // Vector from prev to curr
+    const dx1 = curr.x - prev.x;
+    const dy1 = curr.y - prev.y;
+    const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+
+    // Vector from curr to next
+    const dx2 = next.x - curr.x;
+    const dy2 = next.y - curr.y;
+    const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+
+    // Clamp radius to half the shortest segment
+    const maxR = Math.min(len1, len2) / 2;
+    const cr = Math.min(r, maxR);
+
+    if (cr < 1 || len1 < 1 || len2 < 1) {
+      // Too short for rounding, just go to the point
+      segments.push(`L ${curr.x} ${curr.y}`);
+      continue;
+    }
+
+    // Point before the corner
+    const beforeX = curr.x - (dx1 / len1) * cr;
+    const beforeY = curr.y - (dy1 / len1) * cr;
+
+    // Point after the corner
+    const afterX = curr.x + (dx2 / len2) * cr;
+    const afterY = curr.y + (dy2 / len2) * cr;
+
+    segments.push(`L ${beforeX} ${beforeY}`);
+    segments.push(`Q ${curr.x} ${curr.y} ${afterX} ${afterY}`);
+  }
+
+  const last = points[points.length - 1];
+  segments.push(`L ${last.x} ${last.y}`);
+
+  return segments.join(' ');
+}
+
+/**
  * Compute a clean edge path that handles:
+ * - Waypoint routing (user-defined control points)
  * - Straight vertical lines for aligned nodes (with tolerance)
  * - Forward edges with gentle bezier curves
- * - Back-edges with clean orthogonal (right-angle) routing on the left side
+ * - Back-edges with clean orthogonal routing on the left side
  */
 export function computeEdgePath(
   sourceX: number,
   sourceY: number,
   targetX: number,
-  targetY: number
+  targetY: number,
+  waypoints?: Waypoint[]
 ): string {
+  // If waypoints exist, route through them
+  if (waypoints && waypoints.length > 0) {
+    const points = [
+      { x: sourceX, y: sourceY },
+      ...waypoints,
+      { x: targetX, y: targetY },
+    ];
+    return buildWaypointPath(points);
+  }
+
   const dx = targetX - sourceX;
   const dy = targetY - sourceY;
   const absDx = Math.abs(dx);
   const absDy = Math.abs(dy);
 
   // Back-edge: target is above source (loop back up)
-  // Use clean orthogonal routing like Mermaid
   if (dy < -20) {
-    const r = 8; // corner radius
-    const pad = 20; // exit/entry stub length
-    const loopX = Math.min(sourceX, targetX) - 50; // left offset for the loop
+    const r = 8;
+    const pad = 20;
+    const loopX = Math.min(sourceX, targetX) - 50;
 
-    // Path: down from source → left → up → right → into target
-    // Using quadratic bezier (Q) for smooth 90° corners
     return [
       `M ${sourceX} ${sourceY}`,
-      // Down stub
       `L ${sourceX} ${sourceY + pad - r}`,
-      // Corner: turn left
       `Q ${sourceX} ${sourceY + pad} ${sourceX - r} ${sourceY + pad}`,
-      // Left horizontal
       `L ${loopX + r} ${sourceY + pad}`,
-      // Corner: turn up
       `Q ${loopX} ${sourceY + pad} ${loopX} ${sourceY + pad - r}`,
-      // Up vertical
       `L ${loopX} ${targetY - pad + r}`,
-      // Corner: turn right
       `Q ${loopX} ${targetY - pad} ${loopX + r} ${targetY - pad}`,
-      // Right horizontal
       `L ${targetX - r} ${targetY - pad}`,
-      // Corner: turn down into target
       `Q ${targetX} ${targetY - pad} ${targetX} ${targetY - pad + r}`,
-      // Down into target
       `L ${targetX} ${targetY}`,
     ].join(' ');
   }
 
   // Straight vertical: nodes are aligned (with 8px tolerance)
   if (absDx < 8) {
-    // Snap to averaged X for pixel-perfect straight line
     const x = Math.round((sourceX + targetX) / 2);
     return `M ${x} ${sourceY} L ${x} ${targetY}`;
   }
 
   // Forward edge with gentle bezier curve
   if (absDy > absDx) {
-    // Mostly vertical: S-curve
     const midY = (sourceY + targetY) / 2;
     return `M ${sourceX} ${sourceY} C ${sourceX} ${midY} ${targetX} ${midY} ${targetX} ${targetY}`;
   } else {
-    // Mostly horizontal: S-curve
     const midX = (sourceX + targetX) / 2;
     return `M ${sourceX} ${sourceY} C ${midX} ${sourceY} ${midX} ${targetY} ${targetX} ${targetY}`;
   }

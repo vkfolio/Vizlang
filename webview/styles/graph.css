@@ -155,6 +155,28 @@
   100% { stroke-dashoffset: 0; }
 }
 
+/* ── Waypoint Handles ────────────────────── */
+.waypoint-handle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--card);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  z-index: 10;
+}
+
+.waypoint-handle:hover {
+  transform: translate(-50%, -50%) scale(1.4);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+.waypoint-handle:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
 /* ── Selection ───────────────────────────── */
 .react-flow__node.selected .vizlang-node {
   border-color: var(--accent) !important;

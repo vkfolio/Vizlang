@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { sendMessage } from '@/bridge/MessageBus';
 import { useChatStore } from '@/stores/chatStore';
+import { useExecutionStore } from '@/stores/executionStore';
 import { useThreadStore } from '@/stores/threadStore';
 import { useGraphStore } from '@/stores/graphStore';
 import { cn } from '@/lib/utils';
@@ -34,8 +35,9 @@ export function ChatInput() {
       attachments: messageAttachments.length > 0 ? messageAttachments : undefined,
     });
 
-    // Add thinking indicator immediately
+    // Add thinking indicator and mark as running immediately
     addMessage({ role: 'ai', content: '', thinking: 'Thinking...' });
+    useExecutionStore.getState().setRunStatus('running');
 
     sendMessage({
       type: 'SEND_MESSAGE',

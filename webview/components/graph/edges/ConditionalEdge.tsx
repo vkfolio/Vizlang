@@ -6,6 +6,8 @@ import {
 } from '@xyflow/react';
 import { useExecutionStore } from '@/stores/executionStore';
 import { computeEdgePath } from './AnimatedEdge';
+import type { EdgeData } from '@/stores/graphStore';
+import { WaypointOverlay } from './WaypointOverlay';
 
 export function ConditionalEdge({
   id,
@@ -14,17 +16,20 @@ export function ConditionalEdge({
   targetX,
   targetY,
   label,
+  data,
   style,
+  selected,
 }: EdgeProps) {
   const runStatus = useExecutionStore((s) => s.runStatus);
   const isRunning = runStatus === 'running';
+  const waypoints = (data as EdgeData)?.waypoints;
 
-  const edgePath = computeEdgePath(sourceX, sourceY, targetX, targetY);
+  const edgePath = computeEdgePath(sourceX, sourceY, targetX, targetY, waypoints);
 
   // Position label correctly for both forward and back-edges
   const isBackEdge = targetY < sourceY - 20;
   const labelX = isBackEdge
-    ? Math.min(sourceX, targetX) - 50 // on the left loop segment
+    ? Math.min(sourceX, targetX) - 50
     : (sourceX + targetX) / 2;
   const labelY = (sourceY + targetY) / 2;
 
@@ -56,6 +61,15 @@ export function ConditionalEdge({
           </div>
         </EdgeLabelRenderer>
       )}
+      <WaypointOverlay
+        edgeId={id}
+        waypoints={waypoints || []}
+        sourceX={sourceX}
+        sourceY={sourceY}
+        targetX={targetX}
+        targetY={targetY}
+        selected={selected}
+      />
     </>
   );
 }

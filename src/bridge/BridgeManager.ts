@@ -34,16 +34,22 @@ export class BridgeManager {
     this.protocol = new BridgeProtocol();
 
     // Forward protocol events to VS Code events
-    this.protocol.on('stream', (msg: BridgeResponse) =>
-      this._onStream.fire(msg)
-    );
-    this.protocol.on('interrupt', (msg: BridgeResponse) =>
-      this._onInterrupt.fire(msg)
-    );
-    this.protocol.on('step_pause', (msg: BridgeResponse) =>
-      this._onStepPause.fire(msg)
-    );
-    this.protocol.on('done', (msg: BridgeResponse) => this._onDone.fire(msg));
+    this.protocol.on('stream', (msg: BridgeResponse) => {
+      this.outputChannel.appendLine(`[event] stream — mode: ${msg.mode}`);
+      this._onStream.fire(msg);
+    });
+    this.protocol.on('interrupt', (msg: BridgeResponse) => {
+      this.outputChannel.appendLine(`[event] interrupt`);
+      this._onInterrupt.fire(msg);
+    });
+    this.protocol.on('step_pause', (msg: BridgeResponse) => {
+      this.outputChannel.appendLine(`[event] step_pause`);
+      this._onStepPause.fire(msg);
+    });
+    this.protocol.on('done', (msg: BridgeResponse) => {
+      this.outputChannel.appendLine(`[event] done — id: ${msg.id}`);
+      this._onDone.fire(msg);
+    });
     this.protocol.on('log', (line: string) =>
       this.outputChannel.appendLine(`[bridge] ${line}`)
     );
@@ -99,7 +105,9 @@ export class BridgeManager {
 
     // Handle stdout (JSON Lines responses)
     this.process.stdout?.on('data', (data: Buffer) => {
-      this.protocol.onData(data.toString());
+      const text = data.toString();
+      this.outputChannel.appendLine(`[stdout] Received ${text.length} bytes`);
+      this.protocol.onData(text);
     });
 
     // Handle stderr (Python logs/errors)
@@ -137,20 +145,27 @@ export class BridgeManager {
   }
 
   /**
+   * Write a line to the bridge stdin.
+   */
+  private writeStdin(line: string): void {
+    if (!this.process?.stdin) {
+      throw new Error('Bridge not running');
+    }
+    this.outputChannel.appendLine(`[stdin] Writing ${line.length} bytes`);
+    this.process.stdin.write(line);
+  }
+
+  /**
    * Send a request to the bridge and wait for the response.
    */
   async request(
     method: BridgeMethod,
     params: Record<string, unknown>
   ): Promise<unknown> {
-    if (!this.process?.stdin) {
-      throw new Error('Bridge not running');
-    }
-
     const { request, promise } = this.protocol.createRequest(method, params);
     const line = this.protocol.serialize(request);
 
-    this.process.stdin.write(line);
+    this.writeStdin(line);
     return promise;
   }
 
@@ -161,14 +176,10 @@ export class BridgeManager {
     method: BridgeMethod,
     params: Record<string, unknown>
   ): { id: string; promise: Promise<unknown> } {
-    if (!this.process?.stdin) {
-      throw new Error('Bridge not running');
-    }
-
     const { request, promise } = this.protocol.createRequest(method, params);
     const line = this.protocol.serialize(request);
 
-    this.process.stdin.write(line);
+    this.writeStdin(line);
     return { id: request.id, promise };
   }
 

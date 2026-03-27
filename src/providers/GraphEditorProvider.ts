@@ -15,6 +15,8 @@ export class GraphEditorProvider {
   private currentGraphVar: string | undefined;
   /** Active run disposables — cleaned up before each new run */
   private runDisposables: vscode.Disposable[] = [];
+  /** Whether the graph has been fully loaded and bridge is ready for runs */
+  private graphLoaded = false;
 
   constructor(
     private bridge: BridgeManager,
@@ -53,9 +55,12 @@ export class GraphEditorProvider {
       this.panel.onDidDispose(() => {
         this.panel = undefined;
         this.messageBus = undefined;
+        this.graphLoaded = false;
       });
 
-      // Wait for webview to signal it's ready before loading graph
+      // Wait for webview to be ready before loading graph.
+      // WEBVIEW_READY is sent via setTimeout(0) in the webview, ensuring
+      // the host listener is registered first.
       await new Promise<void>((resolve) => {
         const readyDisposable = this.messageBus!.onMessage((msg) => {
           if (msg.type === 'WEBVIEW_READY') {
@@ -63,11 +68,11 @@ export class GraphEditorProvider {
             resolve();
           }
         });
-        // Timeout fallback in case WEBVIEW_READY is missed
+        // Fallback timeout — should not be needed but prevents deadlock
         setTimeout(() => {
           readyDisposable.dispose();
           resolve();
-        }, 3000);
+        }, 5000);
       });
     }
 
@@ -114,11 +119,18 @@ export class GraphEditorProvider {
         edges: graphData.edges,
       });
 
+      // Verify bridge is responsive before declaring ready
+      await this.bridge.request('ping', {});
+
       this.messageBus.send({
         type: 'BRIDGE_STATUS',
         status: 'ready',
       });
+
+      this.graphLoaded = true;
+      console.log('[VizLang] Graph fully loaded and ready for execution');
     } catch (err: any) {
+      this.graphLoaded = false;
       console.error(`[VizLang] Error loading graph: ${err.message}`);
       this.messageBus.send({
         type: 'BRIDGE_STATUS',
@@ -261,8 +273,10 @@ export class GraphEditorProvider {
   private setupRunListeners(): void {
     // Always clean up previous listeners first
     this.disposeRunListeners();
+    console.log('[VizLang] Setting up run listeners');
 
     const streamDisposable = this.bridge.onStream((response) => {
+      console.log(`[VizLang] >>> Stream event — mode: ${response.mode}, id: ${response.id}`);
       this.messageBus?.send({
         type: 'STREAM_EVENT',
         mode: response.mode as any,
@@ -294,6 +308,7 @@ export class GraphEditorProvider {
     });
 
     const doneDisposable = this.bridge.onDone(() => {
+      console.log('[VizLang] >>> Done event received');
       this.messageBus?.send({
         type: 'RUN_COMPLETE',
         finalState: null,
@@ -315,13 +330,15 @@ export class GraphEditorProvider {
     input: unknown;
     stepMode: boolean;
   }): Promise<void> {
-    console.log(`[VizLang] handleStartRun called — bridge running: ${this.bridge.isRunning}, file: ${this.currentFile}, stepMode: ${msg.stepMode}`);
+    console.log(`[VizLang] handleStartRun called — bridge running: ${this.bridge.isRunning}, graphLoaded: ${this.graphLoaded}, file: ${this.currentFile}, stepMode: ${msg.stepMode}`);
 
-    if (!this.bridge.isRunning) {
-      console.log('[VizLang] Bridge not running, sending error');
+    if (!this.bridge.isRunning || !this.graphLoaded) {
+      console.log('[VizLang] Bridge not ready, sending error');
       this.messageBus?.send({
         type: 'RUN_ERROR',
-        error: 'Bridge not running. Load a graph first.',
+        error: this.graphLoaded
+          ? 'Bridge not running. Load a graph first.'
+          : 'Graph is still loading. Please wait a moment and try again.',
       });
       return;
     }
@@ -338,15 +355,16 @@ export class GraphEditorProvider {
     this.setupRunListeners();
 
     try {
-      console.log(`[VizLang] Sending run request — threadId: ${msg.threadId}, input: ${JSON.stringify(msg.input)}, stepMode: ${msg.stepMode}`);
-      this.bridge.sendRequest('run', {
+      console.log(`[VizLang] Sending run request — threadId: ${msg.threadId}, stepMode: ${msg.stepMode}`);
+      const result = this.bridge.sendRequest('run', {
         thread_id: msg.threadId,
         input: msg.input,
         stream_mode: ['values', 'updates'],
         step_mode: msg.stepMode,
       });
+      console.log(`[VizLang] Run request sent — id: ${result.id}`);
     } catch (err: any) {
-      console.error(`[VizLang] Run request failed: ${err.message}`);
+      console.error(`[VizLang] Run request FAILED: ${err.message}`);
       this.messageBus?.send({
         type: 'RUN_ERROR',
         error: err.message || 'Failed to start execution',

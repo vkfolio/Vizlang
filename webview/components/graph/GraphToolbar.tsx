@@ -40,6 +40,7 @@ export function GraphToolbar() {
 
     useExecutionStore.getState().setStepMode(step);
     useExecutionStore.getState().reset();
+    useExecutionStore.getState().setRunStatus('running');
     useGraphStore.getState().resetNodeStatuses();
 
     sendMessage({
@@ -149,6 +150,15 @@ export function GraphToolbar() {
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 5V7H15V5H19ZM9 5V11H5V5H9ZM19 13V19H15V13H19ZM9 17V19H5V17H9ZM21 3H13V9H21V3ZM11 3H3V13H11V3ZM21 11H13V21H21V11ZM11 15H3V21H11V15Z" />
+            </svg>
+          </button>
+          <button
+            className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            onClick={() => useGraphStore.getState().exportPng?.()}
+            title="Download as PNG"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
             </svg>
           </button>
           <button
