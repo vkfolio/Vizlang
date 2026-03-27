@@ -87,6 +87,20 @@ export class GraphEditorProvider {
     if (!this.messageBus) return;
 
     try {
+      // Cancel any in-progress execution and clean up listeners
+      this.graphLoaded = false;
+      this.disposeRunListeners();
+      if (this.bridge.isRunning) {
+        try {
+          await this.bridge.request('cancel', {});
+        } catch {
+          // Ignore — bridge might not have a running execution
+        }
+      }
+
+      // Notify webview to clear all state (run status, chat, traces)
+      this.messageBus.send({ type: 'RUN_COMPLETE', finalState: null });
+
       // Start bridge if not running
       if (!this.bridge.isRunning) {
         await this.bridge.start();

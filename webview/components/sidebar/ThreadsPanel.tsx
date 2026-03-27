@@ -77,7 +77,7 @@ export function ThreadsPanel() {
           onClear={handleClearDefault}
         />
 
-        {threads.map((t) => (
+        {threads.filter((t) => t.threadId !== 'default').map((t) => (
           <ThreadItem
             key={t.threadId}
             threadId={t.threadId}

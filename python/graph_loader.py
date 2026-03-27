@@ -45,6 +45,9 @@ class GraphLoader:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
+        # Fresh checkpointer for each graph load — clears all old thread state
+        self.checkpointer = MemorySaver()
+
         # Add the file's directory to sys.path so imports work
         file_dir = os.path.dirname(file_path)
         if file_dir not in sys.path:

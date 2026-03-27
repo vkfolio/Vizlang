@@ -39,6 +39,12 @@ export function useStreamHandler() {
       switch (msg.type) {
         case 'GRAPH_DATA':
           setGraphData(msg.nodes, msg.edges, msg.inputSchema, msg.sampleInput);
+          // Clear all state when a new graph is loaded
+          useChatStore.getState().clear();
+          useExecutionStore.getState().reset();
+          useTraceStore.getState().clear();
+          useThreadStore.getState().setThreads([]);
+          useThreadStore.getState().setActiveThread('default');
           break;
 
         case 'GRAPHS_LIST':
