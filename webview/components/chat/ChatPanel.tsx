@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { useChatStore } from '@/stores/chatStore';
 import { useThreadStore } from '@/stores/threadStore';
 import { useExecutionStore } from '@/stores/executionStore';
+import { useGraphStore } from '@/stores/graphStore';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { InterruptChatCard } from '../hitl/InterruptChatCard';
@@ -12,6 +13,7 @@ export function ChatPanel() {
   const setShowToolCalls = useChatStore((s) => s.setShowToolCalls);
   const activeThreadId = useThreadStore((s) => s.activeThreadId);
   const activeInterrupt = useExecutionStore((s) => s.activeInterrupt);
+  const memoryEnabled = useGraphStore((s) => s.checkpointerMode) === 'memory';
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Filter tool messages if toggle is off
@@ -31,10 +33,18 @@ export function ChatPanel() {
       {/* Thread indicator + controls */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card/20 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-node-active" />
-          <span className="text-[11px] font-mono text-muted-foreground">
-            Thread: {activeThreadId}
-          </span>
+          {memoryEnabled ? (
+            <>
+              <div className="w-1.5 h-1.5 rounded-full bg-node-active" />
+              <span className="text-[11px] font-mono text-muted-foreground">
+                Thread: {activeThreadId}
+              </span>
+            </>
+          ) : (
+            <span className="text-[11px] text-muted-foreground/60">
+              Stateless mode
+            </span>
+          )}
         </div>
         <button
           onClick={() => setShowToolCalls(!showToolCalls)}

@@ -92,7 +92,7 @@ export interface TraceSpan {
 
 export type HostMessage =
   // Graph
-  | { type: 'GRAPH_DATA'; nodes: GraphNode[]; edges: GraphEdge[]; inputSchema?: Record<string, string>; sampleInput?: Record<string, unknown> }
+  | { type: 'GRAPH_DATA'; nodes: GraphNode[]; edges: GraphEdge[]; inputSchema?: Record<string, string>; sampleInput?: Record<string, unknown>; outputSchema?: Record<string, string> }
   | { type: 'GRAPHS_LIST'; graphs: GraphInfo[] }
   // Execution
   | { type: 'STREAM_EVENT'; mode: StreamMode; data: unknown; nodeId?: string }
@@ -139,6 +139,8 @@ export type WebviewMessage =
     }
   | { type: 'RESUME_RUN'; threadId: string; stepMode?: boolean }
   | { type: 'CANCEL_RUN' }
+  // Checkpointer
+  | { type: 'SET_CHECKPOINTER'; checkpointerType: 'memory' | 'none' }
   // HITL
   | { type: 'RESOLVE_INTERRUPT'; response: unknown; stepMode?: boolean; threadId?: string }
   // Chat

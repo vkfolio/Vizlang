@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { ThreadsPanel } from './ThreadsPanel';
 import { TracePanel } from './TracePanel';
 import { StatePanel } from './StatePanel';
+import { useGraphStore } from '@/stores/graphStore';
 
 type SidebarTab = 'threads' | 'trace' | 'state';
 
@@ -12,7 +13,21 @@ interface RightSidebarProps {
 }
 
 export function RightSidebar({ isOpen, onClose }: RightSidebarProps) {
+  const checkpointerMode = useGraphStore((s) => s.checkpointerMode);
+  const memoryEnabled = checkpointerMode === 'memory';
+
+  const availableTabs: SidebarTab[] = memoryEnabled
+    ? ['threads', 'trace', 'state']
+    : ['trace', 'state'];
+
   const [activeTab, setActiveTab] = useState<SidebarTab>('trace');
+
+  // If threads tab is active but memory got disabled, switch to trace
+  useEffect(() => {
+    if (!memoryEnabled && activeTab === 'threads') {
+      setActiveTab('trace');
+    }
+  }, [memoryEnabled, activeTab]);
 
   if (!isOpen) return null;
 
@@ -20,7 +35,7 @@ export function RightSidebar({ isOpen, onClose }: RightSidebarProps) {
     <div className="flex flex-col h-full border-l border-border/50 bg-card/20" style={{ width: 280 }}>
       {/* Tab bar */}
       <div className="flex items-center border-b border-border/50 flex-shrink-0">
-        {(['threads', 'trace', 'state'] as const).map((tab) => (
+        {availableTabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -50,7 +65,7 @@ export function RightSidebar({ isOpen, onClose }: RightSidebarProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'threads' && <ThreadsPanel />}
+        {activeTab === 'threads' && memoryEnabled && <ThreadsPanel />}
         {activeTab === 'trace' && <TracePanel />}
         {activeTab === 'state' && <StatePanel />}
       </div>

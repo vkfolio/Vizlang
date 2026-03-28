@@ -20,8 +20,10 @@ class GraphLoader:
         self._loaded_file: str | None = None
 
     def set_checkpointer(self, checkpointer_type: str) -> None:
-        """Switch checkpointer type."""
-        if checkpointer_type == "memory":
+        """Switch checkpointer type. 'none' disables persistence entirely."""
+        if checkpointer_type == "none":
+            self.checkpointer = None
+        elif checkpointer_type == "memory":
             self.checkpointer = MemorySaver()
         elif checkpointer_type == "sqlite":
             try:
@@ -33,7 +35,10 @@ class GraphLoader:
 
         # Recompile graphs with new checkpointer
         for name, raw in self.raw_graphs.items():
-            self.current_graphs[name] = raw.compile(checkpointer=self.checkpointer)
+            if self.checkpointer is not None:
+                self.current_graphs[name] = raw.compile(checkpointer=self.checkpointer)
+            else:
+                self.current_graphs[name] = raw.compile()
 
     def load(self, file_path: str, graph_var: str | None = None) -> dict[str, CompiledStateGraph]:
         """
@@ -45,8 +50,10 @@ class GraphLoader:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        # Fresh checkpointer for each graph load — clears all old thread state
-        self.checkpointer = MemorySaver()
+        # Fresh checkpointer for each graph load — clears old thread state
+        # but preserve "none" mode if set
+        if self.checkpointer is not None:
+            self.checkpointer = MemorySaver()
 
         # Add the file's directory to sys.path so imports work
         file_dir = os.path.dirname(file_path)
@@ -76,22 +83,33 @@ class GraphLoader:
                 continue
 
             if isinstance(obj, CompiledStateGraph):
-                # Already compiled — recompile with our checkpointer
-                # We need the raw graph for recompilation, but if user
-                # already compiled it, we use it as-is for structure
-                # and wrap it
-                graphs[name] = obj
-                # Try to recompile with checkpointer if possible
-                if hasattr(obj, 'builder'):
+                # Check if user already compiled with their own checkpointer
+                user_checkpointer = getattr(obj, "checkpointer", None)
+                if user_checkpointer is not None:
+                    # User provided their own checkpointer — use their compiled graph as-is
+                    graphs[name] = obj
+                    if hasattr(obj, 'builder'):
+                        raw[name] = obj.builder
+                    print(f"[graph_loader] Using user's checkpointer for '{name}': {type(user_checkpointer).__name__}", file=sys.stderr)
+                elif hasattr(obj, 'builder'):
+                    # No user checkpointer — recompile with ours
                     try:
-                        graphs[name] = obj.builder.compile(checkpointer=self.checkpointer)
+                        if self.checkpointer is not None:
+                            graphs[name] = obj.builder.compile(checkpointer=self.checkpointer)
+                        else:
+                            graphs[name] = obj.builder.compile()
                         raw[name] = obj.builder
                     except Exception:
-                        pass  # Use the original compiled graph
+                        graphs[name] = obj
+                else:
+                    graphs[name] = obj
 
             elif isinstance(obj, StateGraph):
                 raw[name] = obj
-                graphs[name] = obj.compile(checkpointer=self.checkpointer)
+                if self.checkpointer is not None:
+                    graphs[name] = obj.compile(checkpointer=self.checkpointer)
+                else:
+                    graphs[name] = obj.compile()
 
         self.current_graphs = graphs
         self.raw_graphs = raw
@@ -171,8 +189,10 @@ class GraphLoader:
         # Extract state schema and generate sample input
         input_schema = {}
         sample_input = {}
+        output_schema = {}
         try:
             input_schema, sample_input = self._extract_schema(graph)
+            output_schema = self._extract_output_schema(graph)
         except Exception as e:
             print(f"[graph_loader] Could not extract schema: {e}", file=sys.stderr)
 
@@ -181,11 +201,13 @@ class GraphLoader:
             "edges": edges,
             "inputSchema": input_schema,
             "sampleInput": sample_input,
+            "outputSchema": output_schema,
         }
 
     @staticmethod
     def _extract_schema(graph: CompiledStateGraph) -> tuple[dict[str, str], dict[str, Any]]:
-        """Extract state schema from graph builder annotations.
+        """Extract input schema from graph builder.
+        Prefers InputSchema (if defined via input_schema=) over the main State.
         Returns (input_schema, sample_input).
         """
         import typing
@@ -194,9 +216,31 @@ class GraphLoader:
         if not schemas:
             return {}, {}
 
-        # Get the first (usually only) state class
-        state_cls = next(iter(schemas.keys()))
-        annotations = getattr(state_cls, '__annotations__', {})
+        schema_list = list(schemas.keys())
+        state_cls = schema_list[0]
+        state_fields = set(getattr(state_cls, '__annotations__', {}).keys())
+
+        # Determine the actual input schema:
+        # - If 3 schemas: [State, InputSchema, OutputSchema] — use InputSchema
+        # - If 2 schemas: could be [State, InputSchema] or [State, PrivateState]
+        #   Check if 2nd schema's fields are a subset of State (= InputSchema)
+        #   or have different fields (= PrivateState from node type hints)
+        # - If 1 schema: just State
+        if len(schema_list) >= 3:
+            input_cls = schema_list[1]  # Explicit InputSchema
+        elif len(schema_list) == 2:
+            candidate = schema_list[1]
+            candidate_fields = set(getattr(candidate, '__annotations__', {}).keys())
+            if candidate_fields.issubset(state_fields):
+                # Fields are a subset of State — this is an InputSchema
+                input_cls = candidate
+            else:
+                # Fields are NOT a subset — this is a PrivateState, use State
+                input_cls = state_cls
+        else:
+            input_cls = state_cls
+
+        annotations = getattr(input_cls, '__annotations__', {})
         if not annotations:
             return {}, {}
 
@@ -204,15 +248,30 @@ class GraphLoader:
         sample_input: dict[str, Any] = {}
 
         for field_name, type_hint in annotations.items():
-            # Unwrap Annotated (check for __metadata__ attribute)
             type_hint = GraphLoader._unwrap_annotated(type_hint)
-
-            # Get readable type name
             type_str = GraphLoader._type_to_str(type_hint)
             input_schema[field_name] = type_str
             sample_input[field_name] = GraphLoader._default_for_type(type_hint)
 
         return input_schema, sample_input
+
+    @staticmethod
+    def _extract_output_schema(graph: CompiledStateGraph) -> dict[str, str]:
+        """Extract output schema if defined (3rd entry in builder.schemas)."""
+        schemas = getattr(graph.builder, 'schemas', {})
+        schema_list = list(schemas.keys())
+
+        if len(schema_list) < 3:
+            return {}  # No explicit output schema
+
+        output_cls = schema_list[2]
+        annotations = getattr(output_cls, '__annotations__', {})
+        output_schema: dict[str, str] = {}
+        for field_name, type_hint in annotations.items():
+            type_hint = GraphLoader._unwrap_annotated(type_hint)
+            output_schema[field_name] = GraphLoader._type_to_str(type_hint)
+
+        return output_schema
 
     @staticmethod
     def _unwrap_annotated(t: Any) -> Any:

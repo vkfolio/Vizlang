@@ -13,6 +13,8 @@ export class GraphEditorProvider {
   private graphService: GraphService;
   private currentFile: string | undefined;
   private currentGraphVar: string | undefined;
+  /** Schema of graph's input — keys are field names, used to decide message format */
+  private currentInputSchema: Record<string, string> | null = null;
   /** Active run disposables — cleaned up before each new run */
   private runDisposables: vscode.Disposable[] = [];
   /** Whether the graph has been fully loaded and bridge is ready for runs */
@@ -133,7 +135,11 @@ export class GraphEditorProvider {
         edges: graphData.edges,
         inputSchema: graphData.inputSchema,
         sampleInput: graphData.sampleInput,
+        outputSchema: graphData.outputSchema,
       });
+
+      // Store schema for message formatting decisions
+      this.currentInputSchema = graphData.inputSchema || null;
 
       // Verify bridge is responsive before declaring ready
       await this.bridge.request('ping', {});
@@ -191,6 +197,18 @@ export class GraphEditorProvider {
       case 'CANCEL_RUN':
         await this.bridge.request('cancel', {});
         this.messageBus?.send({ type: 'RUN_COMPLETE', finalState: null });
+        break;
+
+      case 'SET_CHECKPOINTER':
+        try {
+          await this.bridge.request('set_checkpointer', { type: msg.checkpointerType });
+          // Reload graph with the new checkpointer
+          if (this.currentFile) {
+            await this.loadGraph(this.currentFile);
+          }
+        } catch (e: any) {
+          console.error('[VizLang] Failed to set checkpointer:', e.message);
+        }
         break;
 
       case 'CREATE_THREAD': {
@@ -427,14 +445,49 @@ export class GraphEditorProvider {
       messageContent = msg.content;
     }
 
-    // Build input: messages + any extra fields from schema
-    const input: Record<string, unknown> = {
-      messages: [{ type: 'human', content: messageContent }],
-    };
+    // Build input based on schema
+    let input: Record<string, unknown>;
 
-    // Merge extra input fields (e.g., amount, category, etc.)
-    if (msg.extraInput) {
-      Object.assign(input, msg.extraInput);
+    const schemaKeys = this.currentInputSchema ? Object.keys(this.currentInputSchema) : [];
+    const hasMessagesField = schemaKeys.includes('messages');
+    const hasSingleStringField = schemaKeys.length === 1 &&
+      (this.currentInputSchema?.[schemaKeys[0]]?.includes('str') ?? false);
+    const hasContent = msg.content.trim().length > 0;
+    const hasExtraInput = msg.extraInput && Object.keys(msg.extraInput).length > 0;
+
+    if (!hasContent && hasExtraInput) {
+      // No text message, only extra fields — send them directly as input
+      input = { ...msg.extraInput };
+    } else if (hasMessagesField || schemaKeys.length === 0) {
+      // Standard messages-based graph
+      input = {
+        messages: [{ type: 'human', content: messageContent }],
+      };
+      if (hasExtraInput) {
+        Object.assign(input, msg.extraInput);
+      }
+    } else if (hasSingleStringField) {
+      // Single string input (e.g., question: str) — map chat text directly
+      input = { [schemaKeys[0]]: msg.content };
+      if (hasExtraInput) {
+        Object.assign(input, msg.extraInput);
+      }
+    } else {
+      // Multiple non-message fields — try to parse as JSON, fallback to messages
+      try {
+        input = JSON.parse(msg.content);
+      } catch {
+        if (hasContent) {
+          input = {
+            messages: [{ type: 'human', content: messageContent }],
+          };
+        } else {
+          input = {};
+        }
+      }
+      if (hasExtraInput) {
+        Object.assign(input, msg.extraInput);
+      }
     }
 
     await this.handleStartRun({

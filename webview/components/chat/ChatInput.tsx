@@ -27,29 +27,34 @@ export function ChatInput() {
   const inputSchema = useGraphStore((s) => s.inputSchema);
   const sampleInput = useGraphStore((s) => s.sampleInput);
 
-  // Non-message fields from schema
+  // Non-message fields from schema (exclude primary text field and output-only fields)
+  const outputSchema = useGraphStore((s) => s.outputSchema);
   const extraFieldDefs = React.useMemo(() => {
     if (!inputSchema) return [];
-    return Object.entries(inputSchema)
-      .filter(([key]) => key !== 'messages')
+    const outputKeys = new Set(Object.keys(outputSchema || {}));
+    const hasExplicitOutputSchema = outputKeys.size > 0;
+    const entries = Object.entries(inputSchema).filter(([key]) => key !== 'messages');
+
+    // Find the primary text field (first str field that maps to the chat input)
+    const primaryField = entries.find(([, type]) => type === 'str')?.[0];
+
+    return entries
+      .filter(([key, type]) => {
+        // Skip the primary text field — chat text maps to it
+        if (key === primaryField) return false;
+        // Skip fields in the output schema
+        if (outputKeys.has(key)) return false;
+        // If no explicit output schema, skip other str fields (likely outputs)
+        // Only show non-str fields as extras (int, list, etc. are likely config inputs)
+        if (!hasExplicitOutputSchema && type === 'str') return false;
+        return true;
+      })
       .map(([key, type]) => ({ key, type, sample: sampleInput?.[key] }));
-  }, [inputSchema, sampleInput]);
+  }, [inputSchema, outputSchema, sampleInput]);
 
   const handleSubmit = useCallback(() => {
     const trimmed = text.trim();
-    if ((!trimmed && attachments.length === 0) || isStreaming || !hasGraph) return;
-
-    const messageAttachments = attachments.map((a) => a.attachment);
-
-    addMessage({
-      role: 'human',
-      content: trimmed || (attachments.length > 0 ? `[${attachments.map(a => a.file.name).join(', ')}]` : ''),
-      attachments: messageAttachments.length > 0 ? messageAttachments : undefined,
-    });
-
-    // Add thinking indicator and mark as running immediately
-    addMessage({ role: 'ai', content: '', thinking: 'Thinking...' });
-    useExecutionStore.getState().setRunStatus('running');
+    if (isStreaming || !hasGraph) return;
 
     // Build extra input fields (parse JSON values)
     const extraInput: Record<string, unknown> = {};
@@ -63,20 +68,50 @@ export function ChatInput() {
       }
     }
 
+    const hasExtra = Object.keys(extraInput).length > 0;
+    const hasText = trimmed.length > 0;
+    const hasAttach = attachments.length > 0;
+
+    // Allow sending if there's text, attachments, OR extra fields
+    if (!hasText && !hasAttach && !hasExtra) return;
+
+    const messageAttachments = attachments.map((a) => a.attachment);
+
+    // Show what user sent in chat
+    if (hasText || hasAttach) {
+      addMessage({
+        role: 'human',
+        content: trimmed || (hasAttach ? `[${attachments.map(a => a.file.name).join(', ')}]` : ''),
+        attachments: messageAttachments.length > 0 ? messageAttachments : undefined,
+      });
+    } else if (hasExtra) {
+      // No text, just extra fields — show them as the human message
+      addMessage({
+        role: 'human',
+        content: JSON.stringify(extraInput, null, 2),
+      });
+    }
+
+    // Add thinking indicator and mark as running immediately
+    addMessage({ role: 'ai', content: '', thinking: 'Thinking...' });
+    useExecutionStore.getState().setRunStatus('running');
+
     sendMessage({
       type: 'SEND_MESSAGE',
       threadId: activeThreadId,
       content: trimmed,
       attachments: messageAttachments.length > 0 ? messageAttachments : undefined,
-      extraInput: Object.keys(extraInput).length > 0 ? extraInput : undefined,
+      extraInput: hasExtra ? extraInput : undefined,
     });
 
     setText('');
     setAttachments([]);
+    // Clear extra fields after send
+    setExtraFields({});
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, [text, attachments, isStreaming, hasGraph, activeThreadId, addMessage]);
+  }, [text, attachments, extraFields, isStreaming, hasGraph, activeThreadId, addMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Enter sends, Shift+Enter for newline
@@ -128,7 +163,8 @@ export function ChatInput() {
   };
 
   const disabled = isStreaming || !hasGraph;
-  const canSend = (text.trim() || attachments.length > 0) && !disabled;
+  const hasExtraValues = Object.values(extraFields).some((v) => v.trim().length > 0);
+  const canSend = (text.trim() || attachments.length > 0 || hasExtraValues) && !disabled;
 
   return (
     <div className="border-t border-border/50 bg-card/30 p-3">

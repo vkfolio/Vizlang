@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { onMessage } from '../bridge/MessageBus';
 import { useGraphStore } from '../stores/graphStore';
 import { useExecutionStore } from '../stores/executionStore';
@@ -34,11 +34,14 @@ export function useStreamHandler() {
   const traceCompleteSpan = useTraceStore((s) => s.completeSpan);
   const traceClear = useTraceStore((s) => s.clear);
 
+  // Track latest non-message state for display on RUN_COMPLETE
+  const pendingNonMessageState = useRef<Record<string, unknown> | null>(null);
+
   useEffect(() => {
     const unsubscribe = onMessage((msg: HostMessage) => {
       switch (msg.type) {
         case 'GRAPH_DATA':
-          setGraphData(msg.nodes, msg.edges, msg.inputSchema, msg.sampleInput);
+          setGraphData(msg.nodes, msg.edges, msg.inputSchema, msg.sampleInput, msg.outputSchema);
           // Clear all state when a new graph is loaded
           useChatStore.getState().clear();
           useExecutionStore.getState().reset();
@@ -143,7 +146,7 @@ export function useStreamHandler() {
               });
             }
 
-            // Extract messages for chat store if available
+            // Extract messages for chat store if available, or show raw output
             if (stateData && 'messages' in stateData && Array.isArray(stateData.messages)) {
               const lastMsg = stateData.messages[stateData.messages.length - 1];
               if (lastMsg && typeof lastMsg === 'object') {
@@ -204,6 +207,10 @@ export function useStreamHandler() {
                   }
                 }
               }
+            } else if (stateData && !('messages' in stateData)) {
+              // Non-message graph — store latest state, will display on RUN_COMPLETE
+              // This avoids showing every intermediate values event
+              pendingNonMessageState.current = stateData;
             }
           }
 
@@ -241,6 +248,46 @@ export function useStreamHandler() {
             const msgs = s.messages.filter((m: ChatMessageType) => !m.thinking);
             return msgs.length !== s.messages.length ? { messages: msgs } : {};
           });
+
+          // Display final output for non-message graphs
+          if (pendingNonMessageState.current) {
+            const finalState = pendingNonMessageState.current;
+            const outputSchemaKeys = Object.keys(useGraphStore.getState().outputSchema || {});
+            const inputSchemaKeys = Object.keys(useGraphStore.getState().inputSchema || {});
+
+            let toShow: Record<string, unknown>;
+
+            if (outputSchemaKeys.length > 0) {
+              // OutputSchema defined — show ONLY those fields
+              toShow = {};
+              for (const key of outputSchemaKeys) {
+                if (key in finalState && finalState[key] !== null && finalState[key] !== undefined) {
+                  toShow[key] = finalState[key];
+                }
+              }
+            } else if (inputSchemaKeys.length > 0) {
+              // No output schema, but input schema exists — strip input fields
+              toShow = {};
+              for (const [k, v] of Object.entries(finalState)) {
+                if (!inputSchemaKeys.includes(k) && v !== null && v !== undefined) {
+                  toShow[k] = v;
+                }
+              }
+            } else {
+              // No schemas — show everything non-null
+              toShow = {};
+              for (const [k, v] of Object.entries(finalState)) {
+                if (v !== null && v !== undefined) {
+                  toShow[k] = v;
+                }
+              }
+            }
+
+            if (Object.keys(toShow).length > 0) {
+              chatAddMessage({ role: 'ai', content: JSON.stringify(toShow, null, 2) });
+            }
+            pendingNonMessageState.current = null;
+          }
           break;
         }
 

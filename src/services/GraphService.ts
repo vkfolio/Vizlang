@@ -24,10 +24,11 @@ export class GraphService {
     edges: GraphEdge[];
     inputSchema?: Record<string, string>;
     sampleInput?: Record<string, unknown>;
+    outputSchema?: Record<string, string>;
   }> {
     const data = (await this.bridge.request('get_graph', {
       graph_var: graphVar,
-    })) as { nodes: any[]; edges: any[]; inputSchema?: Record<string, string>; sampleInput?: Record<string, unknown> };
+    })) as { nodes: any[]; edges: any[]; inputSchema?: Record<string, string>; sampleInput?: Record<string, unknown>; outputSchema?: Record<string, string> };
 
     // Python bridge returns { id, name, type, metadata } directly (no nested data)
     const nodes: GraphNode[] = data.nodes.map((n: any) => ({
@@ -48,7 +49,7 @@ export class GraphService {
       data: e.data,
     }));
 
-    return { nodes, edges, inputSchema: data.inputSchema, sampleInput: data.sampleInput };
+    return { nodes, edges, inputSchema: data.inputSchema, sampleInput: data.sampleInput, outputSchema: data.outputSchema };
   }
 
   async listGraphs(filePath: string): Promise<GraphInfo[]> {

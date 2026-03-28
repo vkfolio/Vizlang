@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { useGraphStore } from '@/stores/graphStore';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useChatStore } from '@/stores/chatStore';
+import { useThreadStore } from '@/stores/threadStore';
 import { sendMessage } from '@/bridge/MessageBus';
 
 export function GraphToolbar() {
@@ -10,6 +11,7 @@ export function GraphToolbar() {
   const activeGraphName = useGraphStore((s) => s.activeGraphName);
   const showDots = useGraphStore((s) => s.showDots);
   const setShowDots = useGraphStore((s) => s.setShowDots);
+  const checkpointerMode = useGraphStore((s) => s.checkpointerMode);
   const runStatus = useExecutionStore((s) => s.runStatus);
   const stepMode = useExecutionStore((s) => s.stepMode);
 
@@ -65,7 +67,7 @@ export function GraphToolbar() {
 
     sendMessage({
       type: 'START_RUN',
-      threadId: 'default',
+      threadId: useThreadStore.getState().activeThreadId,
       input,
       stepMode: step,
     });
@@ -98,12 +100,12 @@ export function GraphToolbar() {
   };
 
   const handleNextStep = () => {
-    sendMessage({ type: 'RESUME_RUN', threadId: 'default', stepMode: true });
+    sendMessage({ type: 'RESUME_RUN', threadId: useThreadStore.getState().activeThreadId, stepMode: true });
   };
 
   const handleContinue = () => {
     useExecutionStore.getState().setStepMode(false);
-    sendMessage({ type: 'RESUME_RUN', threadId: 'default', stepMode: false });
+    sendMessage({ type: 'RESUME_RUN', threadId: useThreadStore.getState().activeThreadId, stepMode: false });
   };
 
   const handleStop = () => {
@@ -205,6 +207,30 @@ export function GraphToolbar() {
               <circle cx="3" cy="11" r="1" />
               <circle cx="7" cy="11" r="1" />
               <circle cx="11" cy="11" r="1" />
+            </svg>
+          </button>
+          {/* Memory/Threads toggle */}
+          <button
+            className={cn(
+              'p-1.5 rounded transition-colors',
+              checkpointerMode === 'memory'
+                ? 'text-foreground bg-muted'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+            )}
+            onClick={() => {
+              const newMode = checkpointerMode === 'memory' ? 'none' : 'memory';
+              useGraphStore.getState().setCheckpointerMode(newMode);
+              sendMessage({ type: 'SET_CHECKPOINTER', checkpointerType: newMode });
+            }}
+            title={checkpointerMode === 'memory' ? 'Memory enabled (threads & state persist) — click to disable' : 'Memory disabled (no threads) — click to enable'}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <ellipse cx="12" cy="5" rx="9" ry="3" />
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+              <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+              {checkpointerMode === 'none' && (
+                <line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" className="text-node-error" />
+              )}
             </svg>
           </button>
         </div>

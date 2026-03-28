@@ -52,12 +52,13 @@ class RunExecutor:
         import sys
         print(f"[run_executor] _run_stream called — input_type: {type(input_data).__name__}, step_mode: {step_mode}", file=sys.stderr)
         try:
+            has_checkpointer = getattr(self.graph, "checkpointer", None) is not None
+
             # If no input provided, check if graph has existing state to resume
-            if input_data is None:
+            if input_data is None and has_checkpointer:
                 try:
                     existing = self.graph.get_state(config)
                     if not existing or not existing.values:
-                        # No state and no input — graph needs input
                         self.send_stream(req_id, "error", {
                             "message": "Graph requires input to start. Use Chat to send a message, or provide input.",
                         })
@@ -69,6 +70,13 @@ class RunExecutor:
                     })
                     self.send_done(req_id)
                     return
+            elif input_data is None and not has_checkpointer:
+                # No checkpointer and no input — need input
+                self.send_stream(req_id, "error", {
+                    "message": "Graph requires input to start.",
+                })
+                self.send_done(req_id)
+                return
 
             # Build stream kwargs
             stream_kwargs: dict[str, Any] = {
@@ -122,7 +130,17 @@ class RunExecutor:
 
     def _check_for_interrupts(self, req_id: str, config: dict) -> None:
         """Check if graph is paused and send appropriate events."""
-        state = self.graph.get_state(config)
+        # No checkpointer means no state tracking — just done
+        if getattr(self.graph, "checkpointer", None) is None:
+            self.send_done(req_id)
+            return
+
+        try:
+            state = self.graph.get_state(config)
+        except Exception:
+            self.send_done(req_id)
+            return
+
         if state.next:
             tasks = getattr(state, "tasks", [])
 
@@ -164,7 +182,8 @@ class RunExecutor:
         self._cancelled.clear()
         self._current_thread_id = thread_id
 
-        config = {"configurable": {"thread_id": thread_id}}
+        has_checkpointer = getattr(self.graph, "checkpointer", None) is not None
+        config = {"configurable": {"thread_id": thread_id}} if has_checkpointer else {}
         self._run_stream(req_id, input_data, config, stream_modes, step_mode)
 
     def resume(
@@ -179,7 +198,8 @@ class RunExecutor:
         self._cancelled.clear()
         self._current_thread_id = thread_id
 
-        config = {"configurable": {"thread_id": thread_id}}
+        has_checkpointer = getattr(self.graph, "checkpointer", None) is not None
+        config = {"configurable": {"thread_id": thread_id}} if has_checkpointer else {}
 
         if resume_value is not None:
             input_data = Command(resume=resume_value)

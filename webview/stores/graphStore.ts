@@ -32,8 +32,11 @@ interface GraphState {
   // Layout
   layoutDirection: 'TB' | 'LR';
   showDots: boolean;
+  // Persistence
+  checkpointerMode: 'memory' | 'none';
   // Schema
   inputSchema: Record<string, string> | null;
+  outputSchema: Record<string, string> | null;
   sampleInput: Record<string, unknown> | null;
   // Loading
   isLoading: boolean;
@@ -41,11 +44,12 @@ interface GraphState {
   layoutVersion: number;
 
   // Actions
-  setGraphData: (nodes: GraphNode[], edges: GraphEdge[], inputSchema?: Record<string, string>, sampleInput?: Record<string, unknown>) => void;
+  setGraphData: (nodes: GraphNode[], edges: GraphEdge[], inputSchema?: Record<string, string>, sampleInput?: Record<string, unknown>, outputSchema?: Record<string, string>) => void;
   setAvailableGraphs: (graphs: GraphInfo[]) => void;
   setActiveGraph: (name: string) => void;
   setLayoutDirection: (dir: 'TB' | 'LR') => void;
   setShowDots: (show: boolean) => void;
+  setCheckpointerMode: (mode: 'memory' | 'none') => void;
   relayout: () => void;
   setNodeStatus: (nodeId: string, status: GraphNodeData['status']) => void;
   resetNodeStatuses: () => void;
@@ -101,12 +105,14 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   activeGraphName: null,
   layoutDirection: 'TB',
   showDots: true,
+  checkpointerMode: 'memory',
   inputSchema: null,
+  outputSchema: null,
   sampleInput: null,
   isLoading: false,
   layoutVersion: 0,
 
-  setGraphData: (apiNodes, apiEdges, inputSchema, sampleInput) => {
+  setGraphData: (apiNodes, apiEdges, inputSchema, sampleInput, outputSchema) => {
     const { nodes, edges } = transformToReactFlow(apiNodes, apiEdges);
     set((s) => ({
       apiNodes,
@@ -114,6 +120,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       nodes,
       edges,
       inputSchema: inputSchema || null,
+      outputSchema: outputSchema || null,
       sampleInput: sampleInput || null,
       isLoading: false,
       layoutVersion: s.layoutVersion + 1,
@@ -127,6 +134,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   setLayoutDirection: (dir) => set({ layoutDirection: dir }),
 
   setShowDots: (show) => set({ showDots: show }),
+  setCheckpointerMode: (mode) => set({ checkpointerMode: mode }),
 
   relayout: () => {
     // Clear all waypoints on relayout since they use absolute coordinates
