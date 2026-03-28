@@ -1,0 +1,16 @@
+**/.env
+**/*.env.*
+examples/.env
+.github/**
+node_modules/**
+src/**
+webview/**
+shared/**
+docs/**
+.gitignore
+tsconfig*.json
+vite.config.*
+tailwind.config.*
+postcss.config.*
+CONTRIBUTING.md
+*.vsix

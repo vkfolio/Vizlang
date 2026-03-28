@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="media/logo.svg" width="64" height="64" alt="VizLang" />
-
 # VizLang
 
 **The open-source visual debugger for LangGraph agents.**

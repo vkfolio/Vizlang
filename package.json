@@ -1,9 +1,10 @@
 {
-  "name": "vizlang",
-  "displayName": "VizLang",
+  "name": "vizlang-studio",
+  "displayName": "VizLang Studio - LangGraph Visual Debugger",
+  "icon": "media/icon.png",
   "description": "Standalone LangGraph development environment — graph visualization, chat, HITL, tracing, and time travel inside VS Code",
-  "version": "1.0.0",
-  "publisher": "vizlang",
+  "version": "1.0.1",
+  "publisher": "vkfolio",
   "license": "MIT",
   "repository": {
     "type": "git",
