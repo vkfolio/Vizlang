@@ -1,24 +1,23 @@
-<h1 align="center">VizLang</h1>
+<div align="center">
 
-<p align="center">
-  <strong>Visual debugger for LangGraph agents in VS Code</strong>
-</p>
+<img src="media/logo.svg" width="64" height="64" alt="VizLang" />
 
-<p align="center">
-  See your agent's graph. Watch it think. Step through every node.
-</p>
+# VizLang
 
-<p align="center">
-  <a href="#install">
-    <img src="https://img.shields.io/badge/VS%20Code-Install-007ACC?style=flat-square&logo=visual-studio-code" alt="Install" />
-  </a>
-  <img src="https://img.shields.io/badge/python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+" />
-  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" />
-</p>
+**The open-source visual debugger for LangGraph agents.**
+
+See your graph. Watch it think. Step through every node.
+
+[![VS Code](https://img.shields.io/badge/VS%20Code-Extension-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=vizlang.vizlang)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](#requirements)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](#license)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge)](#contributing)
 
 <br />
 
-<!-- screenshot: hero-graph-view (add hero.png to docs/screenshots/) -->
+<img src="docs/screenshots/hero-graph-view.png" alt="VizLang — graph visualization inside VS Code" width="100%" />
+
+</div>
 
 <br />
 
@@ -26,166 +25,207 @@
 
 <br />
 
-## Why VizLang?
+## The Problem
 
-Building LangGraph agents is powerful. Debugging them shouldn't require `print()` statements and prayer.
+You build a LangGraph agent. It has 6 nodes, 3 conditional edges, a tool loop, and a human-in-the-loop step. Something goes wrong. You add `print()` statements. You stare at terminal output. You lose 45 minutes.
 
-VizLang gives you a visual, interactive debugger right inside VS Code. No cloud service. No API keys. No context switching. Just open your Python file and see your agent's architecture, execution flow, and state changes in real time.
+**VizLang fixes this.**
+
+Right-click your Python file. Your agent's entire architecture appears on an interactive canvas. Click **Run** — watch nodes light up as they execute. Click **Step** — pause after each node and inspect the full state. Talk to your agent in the Chat tab. See tool calls, interrupts, and state changes in real time.
+
+No cloud service. No API keys. No accounts. Everything runs locally.
 
 <br />
 
 ## Features
 
-### Visual Graph Canvas
+<table>
+<tr>
+<td width="50%">
 
-See your agent's architecture at a glance. Nodes, edges, conditional branches, and loops rendered on an infinite canvas with drag, zoom, and auto-layout.
+### Interactive Graph Canvas
 
-<!-- screenshot: graph-canvas -->
+Your agent's architecture rendered on an infinite canvas. Nodes, edges, conditional branches, loops — all draggable and zoomable. Auto-layout keeps things clean. Export as PNG when you need to share.
 
-<br />
+</td>
+<td width="50%">
+
+<img src="docs/screenshots/graph-canvas.png" alt="Interactive graph canvas" width="100%" />
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+<img src="docs/screenshots/real-time-execution.png" alt="Real-time execution" width="100%" />
+
+</td>
+<td width="50%">
 
 ### Real-time Execution
 
-Watch nodes light up green as they complete. Animated edges show data flowing through your graph. See exactly where your agent is at any moment.
+Watch nodes light up green as they complete. Animated edges show data flowing through your graph. See exactly where your agent is at any moment. Errors turn nodes red immediately.
 
-<!-- screenshot: execution-animation -->
-
-<br />
+</td>
+</tr>
+<tr>
+<td width="50%">
 
 ### Step-by-step Debugging
 
-Pause after each node. Inspect the full state. Click "Next" to advance one step, or "Continue All" to let it run. Like a line-by-line debugger, but for agent graphs.
+Pause after each node. Inspect the full state. Click **Next** to advance one step. Click **Continue All** to let it run. Like a line-by-line debugger, but for agent graphs.
 
-<!-- screenshot: step-debugging -->
+</td>
+<td width="50%">
 
-<br />
+<img src="docs/screenshots/step-debugging.png" alt="Step debugging" width="100%" />
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+<img src="docs/screenshots/chat-interface.png" alt="Chat interface" width="100%" />
+
+</td>
+<td width="50%">
 
 ### Chat Interface
 
-Talk to your agent directly. Send messages, see streaming responses, view tool calls. Supports multimodal input with images and files.
+Talk to your agent directly. Send messages, see streaming responses, view tool calls inline. Supports multimodal input — attach images, audio, and files. Toggle tool call visibility on/off.
 
-<!-- screenshot: chat-interface -->
-
-<br />
+</td>
+</tr>
+<tr>
+<td width="50%">
 
 ### State Inspector
 
-Hover any node to see the complete state snapshot at that point in execution. Scroll through large state objects without losing your place.
+Hover any node to see the complete state snapshot at that point in execution. Scroll through large state objects. Pin the tooltip to keep it open while you explore nested data.
 
-<!-- screenshot: state-inspector -->
+</td>
+<td width="50%">
 
-<br />
+<img src="docs/screenshots/state-inspector.png" alt="State inspector" width="100%" />
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+<img src="docs/screenshots/hitl-interrupt.png" alt="Human-in-the-loop" width="100%" />
+
+</td>
+<td width="50%">
 
 ### Human-in-the-Loop
 
-When your agent hits an interrupt, VizLang shows the decision inline. Approve, reject, or provide input without leaving VS Code.
+When your agent hits an interrupt, VizLang shows the decision inline — right on the graph. Approve, reject, or provide input without leaving VS Code. Works with LangGraph's `interrupt()` API.
 
-<!-- screenshot: hitl-interrupt -->
-
-<br />
-
-### Schema-aware Input
-
-VizLang reads your graph's state schema and pre-fills the input form. No more guessing what JSON shape your graph expects.
-
-<!-- screenshot: json-input -->
+</td>
+</tr>
+</table>
 
 <br />
 
-### Thread Management
+### And also...
 
-Create threads, switch between conversations, clear history. Each thread maintains its own state and checkpoint history.
+- **Schema-aware input** — reads your graph's `TypedDict` schema and pre-fills the JSON input form
+- **Thread management** — create, switch, clear, and delete conversation threads
+- **Multiple graphs** — one file, many graphs? Select from the dropdown
+- **Edge waypoints** — double-click edges to add control points, drag to reroute
+- **Drag & drop** — drop a `.py` file onto the canvas to load it
+- **Dark & light themes** — follows your VS Code theme
+- **Memory toggle** — enable/disable checkpointing with one click
+- **Minimap** — navigate large graphs at a glance
+- **PNG export** — download your graph as a high-resolution image
 
-<!-- screenshot: threads -->
+<br />
+
+---
 
 <br />
 
 ## Quick Start
 
-### 1. Install
+### 1. Install the extension
 
-Search for **VizLang** in the VS Code Extensions marketplace, or:
+```bash
+# From VS Code
+# Search "VizLang" in Extensions (Ctrl+Shift+X)
 
-```
+# Or from terminal
 code --install-extension vizlang.vizlang
 ```
 
-<a name="install"></a>
+### 2. Install Python dependencies
 
-### 2. Open a Python file
+```bash
+pip install langgraph langchain-core
+```
 
-Open any Python file that contains a compiled LangGraph `StateGraph`:
+### 3. Open your agent
+
+Create a Python file with a compiled LangGraph:
 
 ```python
 from langgraph.graph import START, END, StateGraph
-from typing import TypedDict, Annotated
+from typing_extensions import TypedDict, Annotated
 import operator
 
 class State(TypedDict):
     messages: Annotated[list[str], operator.add]
-    count: int
 
-def step_one(state: State):
-    return {"messages": ["Step 1 done"], "count": state["count"] + 1}
+def greeter(state: State):
+    return {"messages": ["Hello! How can I help?"]}
 
-def step_two(state: State):
-    return {"messages": ["Step 2 done"]}
+def responder(state: State):
+    return {"messages": ["Here's what I found..."]}
 
 builder = StateGraph(State)
-builder.add_node("step_one", step_one)
-builder.add_node("step_two", step_two)
-builder.add_edge(START, "step_one")
-builder.add_edge("step_one", "step_two")
-builder.add_edge("step_two", END)
+builder.add_node("greeter", greeter)
+builder.add_node("responder", responder)
+builder.add_edge(START, "greeter")
+builder.add_edge("greeter", "responder")
+builder.add_edge("responder", END)
 
 graph = builder.compile()
 ```
 
-### 3. Launch VizLang
+### 4. Launch
 
-Click the **VizLang** button in the editor title bar. Or right-click the file and select **"Open in VizLang"**.
+**Right-click** the file → **"Open in VizLang"**
 
-Your graph appears instantly. Click **Run** or **Step** to execute.
+Or click the VizLang icon in the editor title bar. Or `Ctrl+Shift+P` → `VizLang: Load Graph`.
 
-<br />
-
-## What works
-
-- [x] Graph visualization (nodes, edges, conditional branches, loops)
-- [x] Auto-layout with dagre
-- [x] Node dragging and canvas zoom/pan
-- [x] Run execution with streaming
-- [x] Step-by-step debugging (pause after each node)
-- [x] Chat interface with streaming responses
-- [x] State inspection on node hover
-- [x] Human-in-the-loop interrupt handling
-- [x] Thread create / switch / clear
-- [x] Schema-aware JSON input
-- [x] Multimodal input (images, audio, files)
-- [x] Edge waypoints (double-click to add, drag to reroute)
-- [x] Export graph as PNG
-- [x] Multiple graph support (select from dropdown)
-- [x] Drag-and-drop Python files
-- [x] Dark and light theme support
-- [x] Background dots toggle
-- [x] Minimap
+Your graph appears. Click **Run**. Watch it go.
 
 <br />
 
-## Requirements
+---
 
-| Requirement | Version |
+<br />
+
+## Supported Patterns
+
+VizLang works with any LangGraph `StateGraph`:
+
+| Pattern | Supported |
 |---|---|
-| VS Code | 1.85+ |
-| Python | 3.10+ |
-| langgraph | 0.2+ |
-| langchain-core | 0.3+ |
+| Linear chains | ✅ |
+| Conditional edges | ✅ |
+| Tool-calling agents (ReAct) | ✅ |
+| Human-in-the-loop (`interrupt()`) | ✅ |
+| Multi-agent graphs | ✅ |
+| Custom input/output schemas | ✅ |
+| Private state (node-scoped types) | ✅ |
+| `MemorySaver` checkpointing | ✅ |
+| Graphs without checkpointers | ✅ |
+| Multiple graphs per file | ✅ |
 
-Install Python dependencies:
+<br />
 
-```
-pip install langgraph langchain-core
-```
+---
 
 <br />
 
@@ -193,30 +233,130 @@ pip install langgraph langchain-core
 
 | Action | Shortcut |
 |---|---|
-| Load Graph | `Ctrl+Shift+P` → "VizLang: Load Graph" |
-| Run | Click **Run** in toolbar |
-| Step | Click **Step** in toolbar |
-| Submit input | `Ctrl+Enter` |
+| Load graph | `Ctrl+Shift+P` → "VizLang: Load Graph" |
+| Run graph | Click **▶ Run** |
+| Step through | Click **⏭ Step** |
+| Submit JSON input | `Ctrl+Enter` |
 | Cancel input | `Escape` |
 | Send chat message | `Enter` |
 | New line in chat | `Shift+Enter` |
+| Toggle chat tool calls | Click 🔧 icon |
 
 <br />
 
-## How it works
+---
 
-VizLang spawns a Python subprocess that loads your LangGraph file, extracts the compiled graph, and communicates via JSON-RPC over stdin/stdout. The graph structure is rendered using React Flow in a VS Code webview. Execution uses LangGraph's `stream()` API with `values` and `updates` modes for real-time node status and state inspection.
+<br />
 
-No data leaves your machine. No cloud. No accounts.
+## How It Works
+
+```
+┌──────────────┐     JSON-RPC      ┌──────────────┐
+│   VS Code    │◄──── stdin/out ───►│   Python     │
+│   Extension  │                    │   Bridge     │
+│              │                    │              │
+│  React Flow  │  stream events     │  LangGraph   │
+│  Webview     │◄───────────────────│  .stream()   │
+└──────────────┘                    └──────────────┘
+```
+
+VizLang spawns a Python subprocess that loads your `.py` file, finds compiled `StateGraph` objects, and communicates via JSON-RPC over stdin/stdout. The graph structure is rendered using [React Flow](https://reactflow.dev) in a VS Code webview. Execution uses LangGraph's `stream()` API with `values` and `updates` modes.
+
+**Everything runs on your machine.** No data leaves your environment. No cloud. No telemetry.
+
+<br />
+
+---
+
+<br />
+
+## Requirements
+
+| Dependency | Version |
+|---|---|
+| VS Code | 1.85+ |
+| Python | 3.10+ |
+| `langgraph` | 0.2+ |
+| `langchain-core` | 0.3+ |
+
+> **Note:** Use `typing_extensions.TypedDict` instead of `typing.TypedDict` on Python < 3.12 (Pydantic requirement).
+
+<br />
+
+---
 
 <br />
 
 ## Contributing
 
-Found a bug? Have an idea? [Open an issue](https://github.com/anthropics/vizlang/issues).
+VizLang is open source and we'd love your help. Whether it's a bug fix, new feature, docs improvement, or just a typo — all contributions are welcome.
+
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for setup instructions and guidelines.
+
+### Ways to contribute
+
+- **Report bugs** — [open an issue](../../issues/new?template=bug_report.md) with steps to reproduce
+- **Request features** — [start a discussion](../../issues/new?template=feature_request.md) about what you'd like to see
+- **Fix issues** — look for [`good first issue`](../../labels/good%20first%20issue) labels
+- **Improve docs** — better README, tutorials, examples
+- **Add examples** — sample LangGraph agents that showcase different patterns
+- **Write tests** — help us get to reliable coverage
+
+### Development setup (30 seconds)
+
+```bash
+git clone https://github.com/anthropics/vizlang.git
+cd vizlang
+npm install
+npm run build
+# Press F5 in VS Code to launch Extension Host
+```
+
+<br />
+
+---
+
+<br />
+
+## Roadmap
+
+We're building in the open. Here's what's coming:
+
+- [ ] **Trace timeline** — full execution trace with timing, expandable like Chrome DevTools
+- [ ] **Time travel** — click any checkpoint to restore state
+- [ ] **Subgraph drill-down** — click to zoom into nested graphs
+- [ ] **Breakpoints** — set breakpoints on specific nodes
+- [ ] **LangGraph Server** — connect to remote deployments
+- [ ] **Graph diff** — compare runs side by side
+- [ ] **Performance profiling** — identify slow nodes
+- [ ] **Custom node renderers** — plugins for domain-specific visualization
+
+Have an idea? [Open an issue](../../issues/new?template=feature_request.md).
+
+<br />
+
+---
+
+<br />
+
+## Acknowledgments
+
+Built with [React Flow](https://reactflow.dev), [LangGraph](https://github.com/langchain-ai/langgraph), and [VS Code Extension API](https://code.visualstudio.com/api).
 
 <br />
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.
+
+<br />
+
+---
+
+<div align="center">
+
+**If VizLang helps you debug faster, give it a ⭐**
+
+[Install](https://marketplace.visualstudio.com/items?itemName=vizlang.vizlang) · [Report Bug](../../issues/new?template=bug_report.md) · [Request Feature](../../issues/new?template=feature_request.md) · [Contributing](CONTRIBUTING.md)
+
+</div>

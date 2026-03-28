@@ -2,12 +2,12 @@
   "name": "vizlang",
   "displayName": "VizLang",
   "description": "Standalone LangGraph development environment — graph visualization, chat, HITL, tracing, and time travel inside VS Code",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "publisher": "vizlang",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anthropics/vizlang"
+    "url": "https://github.com/vkfolio/Vizlang"
   },
   "engines": {
     "vscode": "^1.85.0"
