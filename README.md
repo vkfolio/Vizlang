@@ -6,7 +6,7 @@
 
 See your graph. Watch it think. Step through every node.
 
-[![VS Code](https://img.shields.io/badge/VS%20Code-Extension-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=vizlang.vizlang)
+[![VS Code](https://img.shields.io/badge/VS%20Code-Extension-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=vkfolio.vizlang-studio)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](#requirements)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](#license)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge)](#contributing)
@@ -153,7 +153,7 @@ When your agent hits an interrupt, VizLang shows the decision inline — right o
 # Search "VizLang" in Extensions (Ctrl+Shift+X)
 
 # Or from terminal
-code --install-extension vizlang.vizlang
+code --install-extension vkfolio.vizlang-studio
 ```
 
 ### 2. Install Python dependencies
@@ -355,6 +355,6 @@ MIT — see [LICENSE](LICENSE) for details.
 
 **If VizLang helps you debug faster, give it a ⭐**
 
-[Install](https://marketplace.visualstudio.com/items?itemName=vizlang.vizlang) · [Report Bug](../../issues/new?template=bug_report.md) · [Request Feature](../../issues/new?template=feature_request.md) · [Contributing](CONTRIBUTING.md)
+[Install](https://marketplace.visualstudio.com/items?itemName=vkfolio.vizlang-studio) · [Report Bug](../../issues/new?template=bug_report.md) · [Request Feature](../../issues/new?template=feature_request.md) · [Contributing](CONTRIBUTING.md)
 
 </div>
