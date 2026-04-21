@@ -1,18 +1,33 @@
 import React from 'react';
 import {
   BaseEdge,
+  getSmoothStepPath,
   type EdgeProps,
+  type Position,
 } from '@xyflow/react';
 import { useExecutionStore } from '@/stores/executionStore';
 import type { Waypoint, EdgeData } from '@/stores/graphStore';
 import { WaypointOverlay } from './WaypointOverlay';
 
+// ─── Edge rendering constants ────────────────────────────────────────────────
+/**
+ * Step offset for back-edges: how far the path travels along the handle axis
+ * before turning sideways. Scales with vertical distance so the arc stays
+ * proportional. getSmoothStepPath picks left/right automatically based on
+ * relative node positions.
+ */
+const BACK_EDGE_MIN_OFFSET = 40;
+const BACK_EDGE_OFFSET_RATIO = 0.3;
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function AnimatedEdge({
   id,
   sourceX,
   sourceY,
+  sourcePosition,
   targetX,
   targetY,
+  targetPosition,
   data,
   style,
   selected,
@@ -21,7 +36,11 @@ export function AnimatedEdge({
   const isRunning = runStatus === 'running';
   const waypoints = (data as EdgeData)?.waypoints;
 
-  const edgePath = computeEdgePath(sourceX, sourceY, targetX, targetY, waypoints);
+  const edgePath = computeEdgePath(
+    sourceX, sourceY, sourcePosition,
+    targetX, targetY, targetPosition,
+    waypoints,
+  );
 
   return (
     <>
@@ -108,14 +127,16 @@ function buildWaypointPath(points: { x: number; y: number }[]): string {
  * - Waypoint routing (user-defined control points)
  * - Straight vertical lines for aligned nodes (with tolerance)
  * - Forward edges with gentle bezier curves
- * - Back-edges with clean orthogonal routing on the left side
+ * - Back-edges with direction-aware orthogonal routing via getSmoothStepPath
  */
 export function computeEdgePath(
   sourceX: number,
   sourceY: number,
+  sourcePosition: Position,
   targetX: number,
   targetY: number,
-  waypoints?: Waypoint[]
+  targetPosition: Position,
+  waypoints?: Waypoint[],
 ): string {
   // If waypoints exist, route through them
   if (waypoints && waypoints.length > 0) {
@@ -132,24 +153,18 @@ export function computeEdgePath(
   const absDx = Math.abs(dx);
   const absDy = Math.abs(dy);
 
-  // Back-edge: target is above source (loop back up)
+  // Back-edge: target is above source.
+  // Use getSmoothStepPath so the route respects handle direction (giving lift),
+  // then routes left or right based on relative node positions automatically.
   if (dy < -20) {
-    const r = 8;
-    const pad = 20;
-    const loopX = Math.min(sourceX, targetX) - 50;
-
-    return [
-      `M ${sourceX} ${sourceY}`,
-      `L ${sourceX} ${sourceY + pad - r}`,
-      `Q ${sourceX} ${sourceY + pad} ${sourceX - r} ${sourceY + pad}`,
-      `L ${loopX + r} ${sourceY + pad}`,
-      `Q ${loopX} ${sourceY + pad} ${loopX} ${sourceY + pad - r}`,
-      `L ${loopX} ${targetY - pad + r}`,
-      `Q ${loopX} ${targetY - pad} ${loopX + r} ${targetY - pad}`,
-      `L ${targetX - r} ${targetY - pad}`,
-      `Q ${targetX} ${targetY - pad} ${targetX} ${targetY - pad + r}`,
-      `L ${targetX} ${targetY}`,
-    ].join(' ');
+    const offset = Math.max(BACK_EDGE_MIN_OFFSET, absDy * BACK_EDGE_OFFSET_RATIO);
+    const [path] = getSmoothStepPath({
+      sourceX, sourceY, sourcePosition,
+      targetX, targetY, targetPosition,
+      borderRadius: 12,
+      offset,
+    });
+    return path;
   }
 
   // Straight vertical: nodes are aligned (with 8px tolerance)
