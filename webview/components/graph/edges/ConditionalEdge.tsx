@@ -13,8 +13,10 @@ export function ConditionalEdge({
   id,
   sourceX,
   sourceY,
+  sourcePosition,
   targetX,
   targetY,
+  targetPosition,
   label,
   data,
   style,
@@ -24,13 +26,13 @@ export function ConditionalEdge({
   const isRunning = runStatus === 'running';
   const waypoints = (data as EdgeData)?.waypoints;
 
-  const edgePath = computeEdgePath(sourceX, sourceY, targetX, targetY, waypoints);
+  const edgePath = computeEdgePath(
+    sourceX, sourceY, sourcePosition,
+    targetX, targetY, targetPosition,
+    waypoints,
+  );
 
-  // Position label correctly for both forward and back-edges
-  const isBackEdge = targetY < sourceY - 20;
-  const labelX = isBackEdge
-    ? Math.min(sourceX, targetX) - 50
-    : (sourceX + targetX) / 2;
+  const labelX = (sourceX + targetX) / 2;
   const labelY = (sourceY + targetY) / 2;
 
   return (
